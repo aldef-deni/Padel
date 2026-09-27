@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+REQUIRED="deniafrizal2904@gmail.com"
+
+# Hapus semua baris co-author & atribusi AI
+sed -i '/^[[:space:]]*co-authored-by:/Id' "$1"
+sed -i '/generated with \[\?claude/Id' "$1"
+
+# Wajib author & committer = email Deni
+AUTHOR=$(git var GIT_AUTHOR_IDENT | sed -E 's/.*<(.*)>.*/\1/')
+COMMITTER=$(git var GIT_COMMITTER_IDENT | sed -E 's/.*<(.*)>.*/\1/')
+if [ "$AUTHOR" != "$REQUIRED" ] || [ "$COMMITTER" != "$REQUIRED" ]; then
+  echo "DITOLAK: author/committer harus $REQUIRED (sekarang: $AUTHOR / $COMMITTER)"
+  exit 1
+fi

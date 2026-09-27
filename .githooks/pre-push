@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+REQUIRED="deniafrizal2904@gmail.com"
+ZERO=0000000000000000000000000000000000000000
+
+while read -r _ LOCAL_SHA _ REMOTE_SHA; do
+  [ "$LOCAL_SHA" = "$ZERO" ] && continue
+  if [ "$REMOTE_SHA" = "$ZERO" ]; then
+    RANGE="$LOCAL_SHA"
+  else
+    RANGE="$REMOTE_SHA..$LOCAL_SHA"
+  fi
+
+  BAD=$(git log --format='%h %ae %ce' "$RANGE" | awk -v e="$REQUIRED" '$2!=e || $3!=e')
+  COAUTH=$(git log --format='%h %B' "$RANGE" | grep -i 'co-authored-by')
+
+  if [ -n "$BAD" ] || [ -n "$COAUTH" ]; then
+    echo "PUSH DITOLAK: ada commit dengan author lain atau co-author:"
+    echo "$BAD"
+    echo "$COAUTH"
+    exit 1
+  fi
+done
