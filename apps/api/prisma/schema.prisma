@@ -1,0 +1,134 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  CLUB_ADMIN
+  PLAYER
+}
+
+enum ClipStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+model Club {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  address   String?
+  timezone  String   @default("Asia/Jakarta")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courts Court[]
+  admins User[]
+}
+
+model Court {
+  id        String   @id @default(cuid())
+  clubId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club     Club      @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  cameras  Camera[]
+  sessions Session[]
+
+  @@unique([clubId, name])
+}
+
+model Camera {
+  id         String   @id @default(cuid())
+  courtId    String
+  name       String
+  // Path MediaMTX tempat kamera publish, mis. "court-1".
+  streamPath String   @unique
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  court Court  @relation(fields: [courtId], references: [id], onDelete: Restrict)
+  clips Clip[]
+
+  @@index([courtId])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String?
+  role         Role     @default(PLAYER)
+  // Hanya untuk CLUB_ADMIN: klub yang dikelola.
+  clubId       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  club     Club?           @relation(fields: [clubId], references: [id], onDelete: SetNull)
+  sessions SessionPlayer[]
+  clips    Clip[]
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  courtId   String
+  // Token di QR lapangan; pemain scan untuk bergabung.
+  qrToken   String    @unique
+  startedAt DateTime  @default(now())
+  // null = sesi masih aktif.
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  court   Court           @relation(fields: [courtId], references: [id], onDelete: Restrict)
+  players SessionPlayer[]
+  clips   Clip[]
+
+  @@index([courtId, endedAt])
+}
+
+model SessionPlayer {
+  sessionId String
+  userId    String
+  joinedAt  DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, userId])
+  @@index([userId])
+}
+
+model Clip {
+  id            String     @id @default(cuid())
+  sessionId     String
+  cameraId      String
+  requestedById String
+  // Awal potongan (waktu rekaman MediaMTX) dan durasinya.
+  startAt       DateTime
+  durationSec   Int
+  status        ClipStatus @default(PENDING)
+  url           String?
+  error         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  session     Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  camera      Camera  @relation(fields: [cameraId], references: [id], onDelete: Restrict)
+  requestedBy User    @relation(fields: [requestedById], references: [id], onDelete: Restrict)
+
+  @@index([sessionId])
+  @@index([status])
+}
