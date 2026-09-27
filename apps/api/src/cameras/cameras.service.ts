@@ -1,4 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  assertClubAccess,
+  clubScope,
+  type AuthUser,
+} from '../auth/auth-user.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateCameraDto } from './dto/create-camera.dto.js';
 import { ListCamerasQuery } from './dto/list-cameras.query.js';
@@ -8,28 +13,46 @@ import { UpdateCameraDto } from './dto/update-camera.dto.js';
 export class CamerasService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(dto: CreateCameraDto) {
+  async create(user: AuthUser, dto: CreateCameraDto) {
+    await this.assertCourtAccess(user, dto.courtId);
     return this.prisma.camera.create({ data: dto });
   }
 
-  findAll(query: ListCamerasQuery) {
+  findAll(user: AuthUser, query: ListCamerasQuery) {
     return this.prisma.camera.findMany({
-      where: { courtId: query.courtId },
+      where: { courtId: query.courtId, court: { clubId: clubScope(user) } },
       orderBy: { streamPath: 'asc' },
     });
   }
 
-  async findOne(id: string) {
-    const camera = await this.prisma.camera.findUnique({ where: { id } });
-    if (!camera) throw new NotFoundException(`Camera ${id} not found`);
+  async findOne(user: AuthUser, id: string) {
+    const found = await this.prisma.camera.findUnique({
+      where: { id },
+      include: { court: { select: { clubId: true } } },
+    });
+    if (!found) throw new NotFoundException(`Camera ${id} not found`);
+    const { court, ...camera } = found;
+    assertClubAccess(user, court.clubId);
     return camera;
   }
 
-  update(id: string, dto: UpdateCameraDto) {
+  async update(user: AuthUser, id: string, dto: UpdateCameraDto) {
+    await this.findOne(user, id);
+    if (dto.courtId) await this.assertCourtAccess(user, dto.courtId);
     return this.prisma.camera.update({ where: { id }, data: dto });
   }
 
-  async remove(id: string) {
+  async remove(user: AuthUser, id: string) {
+    await this.findOne(user, id);
     await this.prisma.camera.delete({ where: { id } });
+  }
+
+  /** A missing court is left to the FK constraint (400 via PrismaExceptionFilter). */
+  private async assertCourtAccess(user: AuthUser, courtId: string) {
+    const court = await this.prisma.court.findUnique({
+      where: { id: courtId },
+      select: { clubId: true },
+    });
+    if (court) assertClubAccess(user, court.clubId);
   }
 }

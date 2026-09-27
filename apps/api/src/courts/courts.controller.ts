@@ -16,8 +16,14 @@ import {
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiBearerAuth,
+  ApiForbiddenResponse,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import type { AuthUser } from '../auth/auth-user.js';
+import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
+import { ADMIN_ROLES, Roles } from '../auth/decorators/roles.decorator.js';
 import { CourtsService } from './courts.service.js';
 import { CreateCourtDto } from './dto/create-court.dto.js';
 import { ListCourtsQuery } from './dto/list-courts.query.js';
@@ -25,6 +31,10 @@ import { UpdateCourtDto } from './dto/update-court.dto.js';
 import { CourtEntity } from './entities/court.entity.js';
 
 @ApiTags('courts')
+@ApiBearerAuth()
+@ApiUnauthorizedResponse()
+@ApiForbiddenResponse({ description: 'Bukan admin atau bukan klub Anda' })
+@Roles(...ADMIN_ROLES)
 @Controller('courts')
 export class CourtsController {
   constructor(private readonly courts: CourtsService) {}
@@ -35,21 +45,21 @@ export class CourtsController {
   @ApiConflictResponse({
     description: 'Nama lapangan sudah dipakai di klub ini',
   })
-  create(@Body() dto: CreateCourtDto) {
-    return this.courts.create(dto);
+  create(@CurrentUser() user: AuthUser, @Body() dto: CreateCourtDto) {
+    return this.courts.create(user, dto);
   }
 
   @Get()
   @ApiOkResponse({ type: [CourtEntity] })
-  findAll(@Query() query: ListCourtsQuery) {
-    return this.courts.findAll(query);
+  findAll(@CurrentUser() user: AuthUser, @Query() query: ListCourtsQuery) {
+    return this.courts.findAll(user, query);
   }
 
   @Get(':id')
   @ApiOkResponse({ type: CourtEntity })
   @ApiNotFoundResponse()
-  findOne(@Param('id') id: string) {
-    return this.courts.findOne(id);
+  findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.courts.findOne(user, id);
   }
 
   @Patch(':id')
@@ -58,8 +68,12 @@ export class CourtsController {
   @ApiConflictResponse({
     description: 'Nama lapangan sudah dipakai di klub ini',
   })
-  update(@Param('id') id: string, @Body() dto: UpdateCourtDto) {
-    return this.courts.update(id, dto);
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateCourtDto,
+  ) {
+    return this.courts.update(user, id, dto);
   }
 
   @Delete(':id')
@@ -67,7 +81,7 @@ export class CourtsController {
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
   @ApiConflictResponse({ description: 'Lapangan masih punya kamera atau sesi' })
-  remove(@Param('id') id: string) {
-    return this.courts.remove(id);
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.courts.remove(user, id);
   }
 }

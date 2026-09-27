@@ -66,19 +66,37 @@ model Camera {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String?
-  role         Role     @default(PLAYER)
+  id                String    @id @default(cuid())
+  // Admin login dengan email + password.
+  email             String?   @unique
+  // Pemain login dengan OTP ke nomor ini (format E.164, mis. +628123456789).
+  phone             String?   @unique
+  name              String?
+  passwordHash      String?
+  // Token yang dibuat sebelum waktu ini ditolak (logout paksa setelah ganti password).
+  passwordChangedAt DateTime?
+  role              Role      @default(PLAYER)
   // Hanya untuk CLUB_ADMIN: klub yang dikelola.
-  clubId       String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  clubId            String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   club     Club?           @relation(fields: [clubId], references: [id], onDelete: SetNull)
   sessions SessionPlayer[]
   clips    Clip[]
+}
+
+model OtpCode {
+  id         String    @id @default(cuid())
+  phone      String
+  // HMAC kode OTP, kode aslinya tidak disimpan.
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
 }
 
 model Session {

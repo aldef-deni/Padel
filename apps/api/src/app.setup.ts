@@ -19,6 +19,7 @@ export function configureApp(app: INestApplication) {
   const config = new DocumentBuilder()
     .setTitle('Padel Replay API')
     .setVersion('0.1.0')
+    .addBearerAuth()
     .build();
   SwaggerModule.setup('docs', app, () =>
     SwaggerModule.createDocument(app, config),

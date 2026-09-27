@@ -1,0 +1,8 @@
+{
+  "name": "padel",
+  "private": true,
+  "description": "Padel Replay System (pnpm workspace)",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" run dev"
+  }
+}

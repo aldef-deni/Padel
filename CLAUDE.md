@@ -38,3 +38,10 @@ SUPER_ADMIN (pemilik platform), CLUB_ADMIN (pengelola klub), PLAYER (pemain).
 - DILARANG menambahkan "Co-Authored-By", "Generated with Claude Code",
   atau atribusi/kontributor lain dalam pesan commit maupun PR.
 - Jangan push tanpa diminta.
+
+## Backlog
+- Endpoint kelola user (buat/ubah/nonaktifkan CLUB_ADMIN, reset password).
+- Refresh token (sekarang hanya access token 7 hari).
+- Pembersihan berkala tabel OtpCode (kode kedaluwarsa/terpakai).
+- Set `trust proxy` saat deploy di belakang reverse proxy, agar rate limit memakai IP klien asli.
+- Ganti password akun seed (admin@padel.local, klub@padel.local) sebelum go-live.
