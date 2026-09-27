@@ -1,0 +1,67 @@
+# MediaMTX config Padel Replay. Hanya override; nilai lain memakai default MediaMTX.
+# JANGAN tulis password di sini: user/pass kamera diisi lewat env
+# MTX_AUTHINTERNALUSERS_0_USER / MTX_AUTHINTERNALUSERS_0_PASS (infra/.env).
+
+logLevel: info
+
+authMethod: internal
+authInternalUsers:
+  # [0] Kamera: boleh publish ke path court-*. User & pass dari env.
+  - user: camera
+    pass: ""
+    ips: []
+    permissions:
+      - action: publish
+        path: ~^court-[0-9a-z-]+$
+  # [1] Penonton publik: nonton live court-* (WebRTC).
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: read
+        path: ~^court-[0-9a-z-]+$
+  # [2] Layanan lokal (API, worker): playback rekaman, API, metrics.
+  - user: any
+    pass:
+    ips: ["127.0.0.1", "::1"]
+    permissions:
+      - action: read
+      - action: playback
+      - action: api
+      - action: metrics
+
+# Hanya localhost.
+api: true
+apiAddress: 127.0.0.1:9997
+playback: true
+playbackAddress: 127.0.0.1:9996
+hls: true
+hlsAddress: 127.0.0.1:8888
+
+# Publik: ingest kamera.
+rtsp: false
+rtmp: true
+rtmpAddress: :1935
+srt: true
+srtAddress: :8890
+
+# Publik: WebRTC live.
+webrtc: true
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+webrtcAdditionalHosts: [35.219.32.52]
+
+# Tidak dipakai.
+moq: false
+
+pathDefaults:
+  # Rolling buffer 2 jam, fmp4, segmen 10 menit agar penghapusan granular.
+  record: true
+  recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+  recordFormat: fmp4
+  recordPartDuration: 1s
+  recordSegmentDuration: 10m
+  recordDeleteAfter: 2h
+
+paths:
+  "~^court-[0-9a-z-]+$":

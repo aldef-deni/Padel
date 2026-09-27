@@ -1,0 +1,54 @@
+# Infra lokal Padel Replay: PostgreSQL, Redis, MediaMTX.
+# Rahasia dibaca dari infra/.env (lihat .env.example). Jalankan dari folder infra/:
+#   docker compose up -d
+
+name: padel
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set di infra/.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set di infra/.env}
+      POSTGRES_DB: ${POSTGRES_DB:?set di infra/.env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - /opt/padel/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set di infra/.env}"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - /opt/padel/data/redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    restart: unless-stopped
+    # Host network: WebRTC ICE (UDP 8189) dan binding 127.0.0.1 untuk HLS/playback/API
+    # bekerja apa adanya tanpa NAT Docker. Port yang terbuka diatur di mediamtx.yml.
+    network_mode: host
+    user: "${MEDIA_UID:-1001}:${MEDIA_GID:-1002}"
+    environment:
+      # Kredensial kamera (publish) menimpa authInternalUsers[0] di mediamtx.yml.
+      MTX_AUTHINTERNALUSERS_0_USER: ${CAMERA_USER:?set di infra/.env}
+      MTX_AUTHINTERNALUSERS_0_PASS: ${CAMERA_PASS:?set di infra/.env}
+    volumes:
+      - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
+      - /opt/padel/data/recordings:/recordings
