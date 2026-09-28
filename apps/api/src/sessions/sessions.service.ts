@@ -11,6 +11,7 @@ import QRCode from 'qrcode';
 import { assertClubAccess, type AuthUser } from '../auth/auth-user.js';
 import { ClipsService } from '../clips/clips.service.js';
 import { ClipEntity } from '../clips/entities/clip.entity.js';
+import { Role } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SessionAccessService } from './session-access.service.js';
 import {
@@ -118,6 +119,23 @@ export class SessionsService {
     if (!session.court.club.isActive)
       throw new ForbiddenException('Club is disabled');
 
+    // Joining makes the player a club member (visible to the club admin) unless blocked there.
+    const clubId = session.court.club.id;
+    const membership = await this.prisma.clubMember.findUnique({
+      where: { clubId_userId: { clubId, userId: user.id } },
+    });
+    if (membership?.isBlocked) {
+      throw new ForbiddenException('You are blocked at this club');
+    }
+    if (!membership) {
+      // upsert: two quick joins by the same player must not collide.
+      await this.prisma.clubMember.upsert({
+        where: { clubId_userId: { clubId, userId: user.id } },
+        update: {},
+        create: { clubId, userId: user.id },
+      });
+    }
+
     await this.prisma.sessionPlayer.upsert({
       where: { sessionId_userId: { sessionId: session.id, userId: user.id } },
       update: {},
@@ -146,6 +164,16 @@ export class SessionsService {
     if (session.endedAt) throw new ConflictException('Session has ended');
     if (!session.court.club.isActive)
       throw new ForbiddenException('Club is disabled');
+    if (user.role === Role.PLAYER) {
+      const membership = await this.prisma.clubMember.findUnique({
+        where: {
+          clubId_userId: { clubId: session.court.clubId, userId: user.id },
+        },
+      });
+      if (membership?.isBlocked) {
+        throw new ForbiddenException('You are blocked at this club');
+      }
+    }
     return this.clips.createReplay(session, user.id, durationSec);
   }
 

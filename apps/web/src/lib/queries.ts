@@ -5,6 +5,12 @@ import type {
   Clip,
   Club,
   ClubListQuery,
+  ClubPlayer,
+  ClubPlayerListQuery,
+  ClubPlayerListResponse,
+  CreateClubPlayerInput,
+  CreateClubPlayerResponse,
+  UpdateClubPlayerInput,
   ClubListResponse,
   ClubOverview,
   CreateClubInput,
@@ -349,6 +355,52 @@ export function useDeleteClub() {
   const invalidate = useInvalidateClubs()
   return useMutation({
     mutationFn: (id: string) => api<void>(`/clubs/${id}`, { method: 'DELETE' }),
+    onSuccess: invalidate,
+  })
+}
+
+// ---- Pemain klub ----
+
+export function useClubPlayers(clubId: string, query: ClubPlayerListQuery) {
+  const params = new URLSearchParams()
+  if (query.search) params.set('search', query.search)
+  if (query.status) params.set('status', query.status)
+  params.set('page', String(query.page ?? 1))
+  params.set('pageSize', String(query.pageSize ?? 20))
+  return useQuery({
+    queryKey: ['players', clubId, query],
+    queryFn: () => api<ClubPlayerListResponse>(`/clubs/${clubId}/players?${params}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
+function useInvalidatePlayers(clubId: string) {
+  const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries({ queryKey: ['players', clubId] })
+}
+
+export function useCreatePlayer(clubId: string) {
+  const invalidate = useInvalidatePlayers(clubId)
+  return useMutation({
+    mutationFn: (input: CreateClubPlayerInput) =>
+      api<CreateClubPlayerResponse>(`/clubs/${clubId}/players`, { method: 'POST', body: input }),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdatePlayer(clubId: string) {
+  const invalidate = useInvalidatePlayers(clubId)
+  return useMutation({
+    mutationFn: ({ id, ...input }: UpdateClubPlayerInput & { id: string }) =>
+      api<ClubPlayer>(`/clubs/${clubId}/players/${id}`, { method: 'PATCH', body: input }),
+    onSuccess: invalidate,
+  })
+}
+
+export function useRemovePlayer(clubId: string) {
+  const invalidate = useInvalidatePlayers(clubId)
+  return useMutation({
+    mutationFn: (id: string) => api<void>(`/clubs/${clubId}/players/${id}`, { method: 'DELETE' }),
     onSuccess: invalidate,
   })
 }

@@ -95,6 +95,19 @@ Setelah ganti password, semua token lama ditolak (401) dan respons berisi token 
 
 Coba di Swagger: login di `/docs`, salin `accessToken`, klik **Authorize**.
 
+## Pemain klub (CLUB_ADMIN untuk klubnya, SUPER_ADMIN semua klub)
+
+| Endpoint | Keterangan |
+|---|---|
+| `GET /api/clubs/:clubId/players?search=&status=ACTIVE\|BLOCKED&page=&pageSize=` | Daftar pemain klub + jumlah main, replay, terakhir main |
+| `POST /api/clubs/:clubId/players` | `{ phone, name?, email?, note? }`; nomor yang sudah punya akun → akun itu ditautkan (`existingAccount: true`), data akunnya tidak ditimpa |
+| `PATCH /api/clubs/:clubId/players/:userId` | Ubah nama/nomor/email, catatan internal, `isBlocked` |
+| `DELETE /api/clubs/:clubId/players/:userId` | Keluarkan dari klub (akun & riwayat tetap) |
+
+Akun PLAYER bersifat global; tabel `ClubMember` menandai pemain milik sebuah klub. Pemain otomatis
+menjadi anggota saat join sesi lewat QR. Pemain yang **diblokir** di klub tidak bisa join sesi atau
+meminta replay di klub itu (403), tetapi tetap bisa bermain di klub lain.
+
 ## Pengguna (SUPER_ADMIN)
 
 | Endpoint | Keterangan |

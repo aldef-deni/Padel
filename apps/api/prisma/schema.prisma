@@ -48,8 +48,9 @@ model Club {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  courts Court[]
-  admins User[]
+  courts  Court[]
+  admins  User[]
+  members ClubMember[]
 }
 
 model Court {
@@ -103,9 +104,29 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  club     Club?           @relation(fields: [clubId], references: [id], onDelete: SetNull)
-  sessions SessionPlayer[]
-  clips    Clip[]
+  club        Club?           @relation(fields: [clubId], references: [id], onDelete: SetNull)
+  sessions    SessionPlayer[]
+  clips       Clip[]
+  memberships ClubMember[]
+}
+
+// Pemain yang terdaftar di sebuah klub (ditambah admin klub, atau otomatis saat join sesi via QR).
+// Akun PLAYER bersifat global; keanggotaan ini yang menentukan pemain mana yang dikelola admin klub.
+model ClubMember {
+  clubId    String
+  userId    String
+  // Diblokir: tidak bisa join sesi di klub ini (akun tetap aktif di klub lain).
+  isBlocked Boolean  @default(false)
+  // Catatan internal admin klub.
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([clubId, userId])
+  @@index([userId])
 }
 
 model OtpCode {

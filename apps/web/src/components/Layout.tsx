@@ -8,6 +8,7 @@ import {
   Menu,
   RectangleHorizontal,
   Tv,
+  UserRound,
   Users,
   X,
 } from 'lucide-react'
@@ -30,6 +31,7 @@ const NAV: {
   { to: '/', key: 'nav.dashboard', icon: LayoutDashboard, end: true },
   { to: '/courts', key: 'nav.courts', icon: RectangleHorizontal },
   { to: '/cameras', key: 'nav.cameras', icon: Camera },
+  { to: '/players', key: 'nav.players', icon: UserRound },
   { to: '/tv-setup', key: 'nav.tv', icon: Tv },
   { to: '/clubs', key: 'nav.clubs', icon: Building, superAdminOnly: true },
   { to: '/users', key: 'nav.users', icon: Users, superAdminOnly: true },

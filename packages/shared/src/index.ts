@@ -341,3 +341,64 @@ export interface ClubListResponse {
   pageSize: number;
   counts: { ALL: number; ACTIVE: number; INACTIVE: number };
 }
+
+// ---- Pemain klub (CLUB_ADMIN / SUPER_ADMIN) ----
+
+/** Pemain yang terdaftar di klub (akun PLAYER global + keanggotaan klub). */
+export interface ClubPlayer {
+  /** ID akun (User). */
+  id: string;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+  /** Status akun global (dinonaktifkan SUPER_ADMIN). */
+  accountActive: boolean;
+  /** Diblokir di klub ini: tidak bisa join sesi di sini. */
+  isBlocked: boolean;
+  /** Catatan internal admin klub. */
+  note: string | null;
+  joinedAt: IsoDateString;
+  lastLoginAt: IsoDateString | null;
+  /** Jumlah sesi yang diikuti di klub ini. */
+  sessionsCount: number;
+  /** Jumlah replay yang diminta di klub ini. */
+  clipsCount: number;
+  lastPlayedAt: IsoDateString | null;
+}
+
+export interface ClubPlayerListQuery {
+  search?: string;
+  status?: 'ACTIVE' | 'BLOCKED';
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ClubPlayerListResponse {
+  items: ClubPlayer[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: { ALL: number; ACTIVE: number; BLOCKED: number };
+}
+
+export interface CreateClubPlayerInput {
+  /** Wajib; nomor untuk login OTP. Jika sudah terdaftar, akun itu ditambahkan ke klub. */
+  phone: string;
+  name?: string | null;
+  email?: string | null;
+  note?: string | null;
+}
+
+export interface CreateClubPlayerResponse {
+  player: ClubPlayer;
+  /** true = nomor sudah punya akun (mis. main di klub lain); hanya ditambahkan ke klub ini. */
+  existingAccount: boolean;
+}
+
+export interface UpdateClubPlayerInput {
+  name?: string | null;
+  phone?: string;
+  email?: string | null;
+  note?: string | null;
+  isBlocked?: boolean;
+}
