@@ -71,8 +71,10 @@ model Camera {
 
 model User {
   id                String    @id @default(cuid())
-  // Admin login dengan email + password.
+  // Admin login dengan email atau username + password.
   email             String?   @unique
+  // Huruf kecil, 3-32 karakter: a-z 0-9 . _ -
+  username          String?   @unique
   // Pemain login dengan OTP ke nomor ini (format E.164, mis. +628123456789).
   phone             String?   @unique
   name              String?

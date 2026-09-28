@@ -8,10 +8,10 @@ import { errorMessage } from '../lib/errors'
 
 export function LoginPage() {
   const { t } = useTranslation()
-  const { user, login } = useAuth()
+  const { user, login: signIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -24,7 +24,7 @@ export function LoginPage() {
     setError(null)
     setSubmitting(true)
     try {
-      await login({ email, password })
+      await signIn({ login: login.trim(), password })
       navigate(from, { replace: true })
     } catch (err) {
       setError(err instanceof ApiRequestError && err.status === 401 ? t('login.invalid') : errorMessage(err, t))
@@ -42,13 +42,15 @@ export function LoginPage() {
           <p className="mt-1 text-sm text-slate-500">{t('login.subtitle')}</p>
         </div>
         <form onSubmit={onSubmit} className="space-y-4">
-          <Field label={t('login.email')}>
+          <Field label={t('login.identifier')}>
             <Input
-              type="email"
+              type="text"
               autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
             />
           </Field>
           <Field label={t('login.password')}>

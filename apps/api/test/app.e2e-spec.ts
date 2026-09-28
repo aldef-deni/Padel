@@ -98,7 +98,7 @@ describe('API (e2e)', () => {
   async function login(email: string) {
     const res = await request(server())
       .post('/api/auth/admin/login')
-      .send({ email, password })
+      .send({ login: email, password })
       .expect(200);
     return res.body.accessToken as string;
   }
@@ -125,13 +125,38 @@ describe('API (e2e)', () => {
     it('rejects a wrong password and unknown email with the same 401', async () => {
       const wrong = await request(server())
         .post('/api/auth/admin/login')
-        .send({ email: superEmail, password: 'salah' })
+        .send({ login: superEmail, password: 'salah' })
         .expect(401);
       const unknown = await request(server())
         .post('/api/auth/admin/login')
-        .send({ email: `nobody-${run}@e2e.test`, password })
+        .send({ login: `nobody-${run}@e2e.test`, password })
         .expect(401);
       expect(wrong.body.message).toBe(unknown.body.message);
+    });
+
+    it('accepts a username (case-insensitive) instead of an email', async () => {
+      const username = `admin-${run}`;
+      await prisma.user.create({
+        data: {
+          username,
+          passwordHash: await hashPassword(password),
+          role: Role.SUPER_ADMIN,
+        },
+      });
+      const res = await request(server())
+        .post('/api/auth/admin/login')
+        .send({ login: ` ${username.toUpperCase()} `, password })
+        .expect(200);
+      expect(res.body.user).toMatchObject({
+        username,
+        email: null,
+        role: 'SUPER_ADMIN',
+      });
+      await request(server())
+        .post('/api/auth/admin/login')
+        .send({ login: username, password: 'salah' })
+        .expect(401);
+      await prisma.user.delete({ where: { username } });
     });
 
     it('GET /api/auth/me returns the user without the password hash', async () => {
@@ -202,11 +227,11 @@ describe('API (e2e)', () => {
 
       await request(server())
         .post('/api/auth/admin/login')
-        .send({ email, password })
+        .send({ login: email, password })
         .expect(401);
       await request(server())
         .post('/api/auth/admin/login')
-        .send({ email, password: newPassword })
+        .send({ login: email, password: newPassword })
         .expect(200);
     });
   });

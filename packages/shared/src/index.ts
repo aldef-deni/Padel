@@ -45,6 +45,7 @@ export interface Camera {
 export interface User {
   id: string;
   email: string | null;
+  username: string | null;
   phone: string | null;
   name: string | null;
   role: Role;
@@ -54,7 +55,8 @@ export interface User {
 // ---- Auth ----
 
 export interface AdminLoginInput {
-  email: string;
+  /** Email atau username. */
+  login: string;
   password: string;
 }
 

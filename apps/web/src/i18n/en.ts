@@ -31,7 +31,7 @@ export const en: Messages<typeof id> = {
   login: {
     title: 'Admin sign in',
     subtitle: "Manage your club's courts and cameras.",
-    email: 'Email',
+    identifier: 'Email or username',
     password: 'Password',
     submit: 'Sign in',
     submitting: 'Signing in…',

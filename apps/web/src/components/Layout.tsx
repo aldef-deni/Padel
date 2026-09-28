@@ -69,7 +69,7 @@ export function Layout() {
                 </button>
               ))}
             </div>
-            <span className="hidden text-slate-500 sm:inline">{user?.email}</span>
+            <span className="hidden text-slate-500 sm:inline">{user?.username ?? user?.email}</span>
             <button type="button" onClick={logout} className="text-slate-600 hover:text-slate-900">
               {t('nav.logout')}
             </button>

@@ -4,6 +4,7 @@ import { Role } from '../../generated/prisma/client.js';
 export class UserEntity {
   @ApiProperty() id: string;
   @ApiProperty({ type: String, nullable: true }) email: string | null;
+  @ApiProperty({ type: String, nullable: true }) username: string | null;
   @ApiProperty({ type: String, nullable: true, example: '+6281234567890' })
   phone: string | null;
   @ApiProperty({ type: String, nullable: true }) name: string | null;

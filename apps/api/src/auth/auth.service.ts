@@ -30,7 +30,7 @@ const OTP_MAX_ATTEMPTS = 5;
 
 @Injectable()
 export class AuthService implements OnModuleInit {
-  // Verified against when the email is unknown, so both cases take equally long.
+  // Verified against when the login is unknown, so both cases take equally long.
   private dummyHash: string;
   private readonly otpSecret: string;
 
@@ -47,12 +47,14 @@ export class AuthService implements OnModuleInit {
     this.dummyHash = await hashPassword('dummy-password');
   }
 
+  /** `login` is an email (contains "@") or a username; both are stored lowercase. */
   async adminLogin(
-    email: string,
+    login: string,
     password: string,
   ): Promise<AuthResponseEntity> {
+    const id = login.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+      where: id.includes('@') ? { email: id } : { username: id },
     });
     const valid = await verifyPassword(
       password,
@@ -64,7 +66,7 @@ export class AuthService implements OnModuleInit {
       !valid ||
       !ADMIN_ROLES.includes(user.role)
     ) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException('Invalid login or password');
     }
     return this.issueToken(user);
   }
@@ -135,7 +137,7 @@ export class AuthService implements OnModuleInit {
       (await this.prisma.user.findUnique({ where: { phone } })) ??
       (await this.prisma.user.create({ data: { phone, role: Role.PLAYER } }));
     if (user.role !== Role.PLAYER) {
-      throw new UnauthorizedException('Admin accounts must use email login');
+      throw new UnauthorizedException('Admin accounts must use password login');
     }
     return this.issueToken(user);
   }
@@ -202,6 +204,6 @@ export class AuthService implements OnModuleInit {
 }
 
 function toUserEntity(user: User): UserEntity {
-  const { id, email, phone, name, role, clubId } = user;
-  return { id, email, phone, name, role, clubId };
+  const { id, email, username, phone, name, role, clubId } = user;
+  return { id, email, username, phone, name, role, clubId };
 }

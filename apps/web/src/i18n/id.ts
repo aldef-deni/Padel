@@ -27,7 +27,7 @@ export const id = {
   login: {
     title: 'Masuk Admin',
     subtitle: 'Kelola lapangan dan kamera klub Anda.',
-    email: 'Email',
+    identifier: 'Email atau username',
     password: 'Password',
     submit: 'Masuk',
     submitting: 'Memproses…',

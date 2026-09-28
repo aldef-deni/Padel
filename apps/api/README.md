@@ -52,7 +52,7 @@ Semua route butuh token kecuali yang ditandai `@Public()` (health, login, OTP).
 
 | Endpoint | Untuk | Body |
 |---|---|---|
-| `POST /api/auth/admin/login` | SUPER_ADMIN, CLUB_ADMIN | `{ email, password }` |
+| `POST /api/auth/admin/login` | SUPER_ADMIN, CLUB_ADMIN | `{ login, password }`, `login` = email atau username |
 | `POST /api/auth/otp/request` | pemain | `{ phone }`: `0812...` atau `+62812...` |
 | `POST /api/auth/otp/verify` | pemain | `{ phone, code }` → akun PLAYER dibuat otomatis saat login pertama |
 | `PATCH /api/auth/password` | SUPER_ADMIN, CLUB_ADMIN | `{ currentPassword, newPassword }` (min. 12 karakter) → token baru |
@@ -72,6 +72,16 @@ Pengiriman WhatsApp nanti cukup mengganti provider `OTP_SENDER` di `auth.module.
 
 Akses di luar hak → 403, tanpa/token salah → 401. Rate limit per IP: 120 req/menit umum,
 lebih ketat di login/OTP (429 jika terlampaui).
+
+**Membuat/memperbarui akun admin** (belum ada endpoint kelola user):
+
+```bash
+ADMIN_PASSWORD='...' pnpm user:admin --username <nama> [--email <email>] [--name "<Nama>"] \
+  [--role SUPER_ADMIN|CLUB_ADMIN] [--club <clubId>]
+```
+
+Username: huruf kecil, 3–32 karakter `a-z 0-9 . _ -`. Password minimal 12 karakter. Jika akun sudah ada,
+password & role diperbarui dan semua token lamanya dicabut.
 
 Password disimpan dengan scrypt. Akun admin dibuat oleh `pnpm db:seed` dari
 `SEED_ADMIN_*` dan `SEED_CLUB_ADMIN_*` di `.env`. Password hanya di-set saat akun dibuat,

@@ -36,10 +36,10 @@ export class AuthController {
   @HttpCode(200)
   @ApiOkResponse({ type: AuthResponseEntity })
   @ApiUnauthorizedResponse({
-    description: 'Email/password salah atau bukan admin',
+    description: 'Email/username/password salah atau bukan admin',
   })
   adminLogin(@Body() dto: AdminLoginDto) {
-    return this.auth.adminLogin(dto.email, dto.password);
+    return this.auth.adminLogin(dto.login, dto.password);
   }
 
   @Public()
