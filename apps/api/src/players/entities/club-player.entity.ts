@@ -8,6 +8,7 @@ import type {
 export class ClubPlayerEntity implements ClubPlayer {
   @ApiProperty({ description: 'ID akun pemain' }) id: string;
   @ApiProperty({ type: String, nullable: true }) name: string | null;
+  @ApiProperty({ type: String, nullable: true }) avatarUrl: string | null;
   @ApiProperty({ type: String, nullable: true, example: '+6281234567890' })
   phone: string | null;
   @ApiProperty({ type: String, nullable: true }) email: string | null;

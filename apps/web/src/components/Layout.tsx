@@ -20,6 +20,7 @@ import { useAuth } from '../lib/auth-context'
 import { useActiveClub } from '../lib/club-context'
 import { BrandMark } from './brand'
 import { EmptyState, Loading } from './ui'
+import { UserAvatar } from './UserAvatar'
 
 const NAV: {
   to: string
@@ -46,7 +47,7 @@ export function Layout() {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'SUPER_ADMIN'
   // Platform pages (clubs, users) work without an active club, e.g. before the first club exists.
-  const needsClub = !['/clubs', '/users'].some((p) => location.pathname.startsWith(p))
+  const needsClub = !['/clubs', '/users', '/profile'].some((p) => location.pathname.startsWith(p))
   useLockBodyScroll(drawerOpen)
 
   // Close the drawer after navigating.
@@ -184,12 +185,20 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-3 rounded-xl bg-white/[0.04] p-2.5">
-          <Avatar name={displayName} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-white">{displayName}</p>
-            <p className="truncate text-xs text-slate-500">{user && t(`roles.${user.role}`)}</p>
-          </div>
+        <div className="flex items-center gap-1 rounded-xl bg-white/[0.04] p-1.5">
+          <NavLink
+            to="/profile"
+            title={t('nav.profile')}
+            className={({ isActive }) =>
+              `flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 transition hover:bg-white/[0.06] ${isActive ? 'bg-white/[0.08]' : ''}`
+            }
+          >
+            <UserAvatar name={displayName} url={user?.avatarUrl} className="h-9 w-9 text-xs ring-2 ring-white/10" tone="slate" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-white">{displayName}</p>
+              <p className="truncate text-xs text-slate-500">{user && t(`roles.${user.role}`)}</p>
+            </div>
+          </NavLink>
           <button
             type="button"
             onClick={logout}
@@ -257,13 +266,6 @@ function ClubLogo({ club }: { club: Club }) {
   )
 }
 
-function Avatar({ name }: { name: string }) {
-  return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-600 to-slate-800 text-xs font-semibold text-white ring-2 ring-white/10">
-      {initials(name)}
-    </span>
-  )
-}
 
 function initials(name: string) {
   const parts = name.replace(/[^\p{L}\p{N} ]/gu, ' ').trim().split(/\s+/)

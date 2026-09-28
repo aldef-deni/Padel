@@ -14,6 +14,7 @@ import { SessionsModule } from './sessions/sessions.module.js';
 import { TvModule } from './tv/tv.module.js';
 import { UsersModule } from './users/users.module.js';
 import { PlayersModule } from './players/players.module.js';
+import { ProfileModule } from './profile/profile.module.js';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { PlayersModule } from './players/players.module.js';
     TvModule,
     UsersModule,
     PlayersModule,
+    ProfileModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: HttpThrottlerGuard }],

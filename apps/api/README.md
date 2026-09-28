@@ -95,6 +95,19 @@ Setelah ganti password, semua token lama ditolak (401) dan respons berisi token 
 
 Coba di Swagger: login di `/docs`, salin `accessToken`, klik **Authorize**.
 
+## Profil & foto profil (semua pengguna yang login)
+
+| Endpoint | Keterangan |
+|---|---|
+| `GET /api/auth/me` | Profil sendiri (+ `avatarUrl`, `lastLoginAt`, `createdAt`) |
+| `PATCH /api/auth/me` | `{ name?, username?, email?, phone? }`; admin wajib tetap punya username/email; PLAYER tidak bisa ganti nomor di sini (lewat OTP) |
+| `POST /api/auth/me/avatar` | multipart `file`: PNG/JPEG/WebP ≤ 2 MB (dicek dari isi file), disimpan di `AVATARS_DIR` |
+| `DELETE /api/auth/me/avatar` | Hapus foto profil |
+| `GET /api/users/:id/avatar` | Publik; `avatarUrl` memuat versi file sebagai cache-buster |
+
+Web memotong & mengecilkan foto di browser (bingkai lingkaran, 512×512 WebP) sebelum upload.
+`PATCH /api/auth/password` dengan password lama salah → **400** (bukan 401, agar klien tidak logout).
+
 ## Pemain klub (CLUB_ADMIN untuk klubnya, SUPER_ADMIN semua klub)
 
 | Endpoint | Keterangan |

@@ -7,6 +7,7 @@ import {
 import { assertClubAccess, type AuthUser } from '../auth/auth-user.js';
 import { normalizePhone } from '../auth/phone.js';
 import { Prisma, Role } from '../generated/prisma/client.js';
+import { userAvatarUrl } from '../common/avatar-url.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   CreatePlayerDto,
@@ -205,6 +206,7 @@ export class PlayersService {
     return {
       id: user.id,
       name: user.name,
+      avatarUrl: userAvatarUrl(user),
       phone: user.phone,
       email: user.email,
       accountActive: user.isActive,

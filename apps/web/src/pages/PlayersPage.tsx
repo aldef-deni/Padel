@@ -16,12 +16,12 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '../components/Modal'
 import { PlayerFormDialog } from '../components/PlayerFormDialog'
+import { UserAvatar } from '../components/UserAvatar'
 import { Button, Card, ErrorText, Input, Loading, PageHeader } from '../components/ui'
 import { relativeTime } from '../lib/format'
 import { playerErrorMessage } from '../lib/players'
 import { useClubPlayers, useRemovePlayer, useUpdatePlayer } from '../lib/queries'
 import { useClub } from '../lib/use-club'
-import { initials } from '../lib/users'
 
 const PAGE_SIZE = 20
 type Status = 'ALL' | 'ACTIVE' | 'BLOCKED'
@@ -211,13 +211,7 @@ function PlayerTable({
               <tr key={player.id} className={player.isBlocked ? 'bg-red-50/30' : ''} data-player-id={player.id}>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                        player.isBlocked ? 'bg-slate-200 text-slate-500' : 'bg-gradient-to-br from-amber-400 to-orange-500 text-white'
-                      }`}
-                    >
-                      {initials(display)}
-                    </span>
+<UserAvatar name={display} url={player.avatarUrl} tone={player.isBlocked ? 'muted' : 'amber'} />
                     <div className="min-w-0">
                       <p className="flex items-center gap-1.5 truncate font-medium text-slate-900">
                         {display}

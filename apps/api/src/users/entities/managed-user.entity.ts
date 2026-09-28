@@ -18,6 +18,7 @@ export class ManagedUserEntity implements ManagedUser {
   @ApiProperty({ type: ClubRef, nullable: true }) club: ClubRef | null;
   @ApiProperty() isActive: boolean;
   @ApiProperty() hasPassword: boolean;
+  @ApiProperty({ type: String, nullable: true }) avatarUrl: string | null;
   @ApiProperty({ type: String, nullable: true }) lastLoginAt: string | null;
   @ApiProperty() createdAt: string;
   @ApiProperty() updatedAt: string;

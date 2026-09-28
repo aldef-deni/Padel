@@ -197,7 +197,7 @@ describe('API (e2e)', () => {
         .patch('/api/auth/password')
         .set(auth(oldToken))
         .send({ currentPassword: 'salah', newPassword })
-        .expect(401);
+        .expect(400);
       await request(server())
         .patch('/api/auth/password')
         .set(auth(oldToken))

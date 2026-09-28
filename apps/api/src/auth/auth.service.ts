@@ -13,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { Role, type User } from '../generated/prisma/client.js';
+import { userAvatarUrl } from '../common/avatar-url.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { JwtPayload } from './auth-user.js';
 import { ADMIN_ROLES } from './decorators/roles.decorator.js';
@@ -161,7 +162,8 @@ export class AuthService implements OnModuleInit {
       !user?.passwordHash ||
       !(await verifyPassword(currentPassword, user.passwordHash))
     ) {
-      throw new UnauthorizedException('Current password is incorrect');
+      // 400, not 401: the session is valid; a 401 would make clients sign the user out.
+      throw new BadRequestException('Current password is incorrect');
     }
     if (currentPassword === newPassword) {
       throw new BadRequestException(
@@ -218,7 +220,18 @@ export class AuthService implements OnModuleInit {
   }
 }
 
-function toUserEntity(user: User): UserEntity {
+export function toUserEntity(user: User): UserEntity {
   const { id, email, username, phone, name, role, clubId } = user;
-  return { id, email, username, phone, name, role, clubId };
+  return {
+    id,
+    email,
+    username,
+    phone,
+    name,
+    role,
+    clubId,
+    avatarUrl: userAvatarUrl(user),
+    lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+    createdAt: user.createdAt.toISOString(),
+  };
 }

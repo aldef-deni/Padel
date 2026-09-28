@@ -63,6 +63,10 @@ export interface User {
   name: string | null;
   role: Role;
   clubId: string | null;
+  /** URL foto profil (publik), null jika belum diunggah. */
+  avatarUrl: string | null;
+  lastLoginAt: IsoDateString | null;
+  createdAt: IsoDateString;
 }
 
 // ---- Auth ----
@@ -81,6 +85,14 @@ export interface AuthResponse {
 export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;
+}
+
+/** PATCH /api/auth/me — profil sendiri. Pemain tidak bisa mengganti nomor di sini (lewat OTP). */
+export interface UpdateProfileInput {
+  name?: string | null;
+  username?: string | null;
+  email?: string | null;
+  phone?: string | null;
 }
 
 // ---- Input CRUD ----
@@ -349,6 +361,7 @@ export interface ClubPlayer {
   /** ID akun (User). */
   id: string;
   name: string | null;
+  avatarUrl: string | null;
   phone: string | null;
   email: string | null;
   /** Status akun global (dinonaktifkan SUPER_ADMIN). */

@@ -10,6 +10,10 @@ export class UserEntity {
   @ApiProperty({ type: String, nullable: true }) name: string | null;
   @ApiProperty({ enum: Role }) role: Role;
   @ApiProperty({ type: String, nullable: true }) clubId: string | null;
+  @ApiProperty({ type: String, nullable: true, description: 'URL foto profil' })
+  avatarUrl: string | null;
+  @ApiProperty({ type: String, nullable: true }) lastLoginAt: string | null;
+  @ApiProperty() createdAt: string;
 }
 
 export class AuthResponseEntity {

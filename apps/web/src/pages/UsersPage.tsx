@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '../components/Modal'
 import { Button, Card, ErrorText, Input, Loading, PageHeader } from '../components/ui'
+import { UserAvatar } from '../components/UserAvatar'
 import { UserFormDialog } from '../components/UserFormDialog'
 import { useAuth } from '../lib/auth-context'
 import { relativeTime } from '../lib/format'
 import { useDeleteUser, useUpdateUser, useUsers } from '../lib/queries'
-import { initials, roleBadge, userErrorMessage } from '../lib/users'
+import { roleBadge, userErrorMessage } from '../lib/users'
 
 const PAGE_SIZE = 20
 const ROLE_TABS: (Role | 'ALL')[] = ['ALL', 'SUPER_ADMIN', 'CLUB_ADMIN', 'PLAYER']
@@ -152,13 +153,7 @@ function UserTable({
               <tr key={user.id} className={`group ${user.isActive ? '' : 'bg-slate-50/60'}`} data-user-id={user.id}>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                        user.isActive ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white' : 'bg-slate-200 text-slate-500'
-                      }`}
-                    >
-                      {initials(display)}
-                    </span>
+<UserAvatar name={display} url={user.avatarUrl} tone={user.isActive ? 'emerald' : 'muted'} />
                     <div className="min-w-0">
                       <p className="flex items-center gap-2 truncate font-medium text-slate-900">
                         {display}

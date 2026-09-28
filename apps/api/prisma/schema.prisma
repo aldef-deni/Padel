@@ -99,6 +99,8 @@ model User {
   // false = akun dinonaktifkan: tidak bisa login, token yang ada langsung ditolak.
   isActive          Boolean   @default(true)
   lastLoginAt       DateTime?
+  // Nama file foto profil di AVATARS_DIR (berubah setiap upload).
+  avatarFile        String?
   // Hanya untuk CLUB_ADMIN: klub yang dikelola.
   clubId            String?
   createdAt         DateTime  @default(now())

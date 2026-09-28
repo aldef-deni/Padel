@@ -37,14 +37,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [queryClient],
   )
 
+  const setSession = useCallback(
+    (res: AuthResponse) => {
+      setToken(res.accessToken)
+      setTokenState(res.accessToken)
+      queryClient.setQueryData(meQueryKey, res.user)
+    },
+    [queryClient],
+  )
+  const updateUser = useCallback((u: User) => queryClient.setQueryData(meQueryKey, u), [queryClient])
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user: token ? (me.data ?? null) : null,
       isLoading: !!token && me.isPending,
       login,
       logout,
+      setSession,
+      updateUser,
     }),
-    [token, me.data, me.isPending, login, logout],
+    [token, me.data, me.isPending, login, logout, setSession, updateUser],
   )
 
   return <AuthContext value={value}>{children}</AuthContext>

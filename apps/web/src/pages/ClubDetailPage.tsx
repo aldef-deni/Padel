@@ -27,6 +27,7 @@ import { ClubAvatar } from '../components/ClubAvatar'
 import { ClubFormDialog } from '../components/ClubFormDialog'
 import { Modal } from '../components/Modal'
 import { Button, Card, ErrorText, Loading } from '../components/ui'
+import { UserAvatar } from '../components/UserAvatar'
 import { UserFormDialog } from '../components/UserFormDialog'
 import { useActiveClub } from '../lib/club-context'
 import { clubErrorMessage, instagramUrl, TIMEZONES } from '../lib/clubs'
@@ -43,7 +44,6 @@ import {
   useUploadLogo,
   useUsers,
 } from '../lib/queries'
-import { initials } from '../lib/users'
 
 export function ClubDetailPage() {
   const { t } = useTranslation()
@@ -170,9 +170,7 @@ function ClubDetail({ club }: { club: Club }) {
                   const name = admin.name ?? admin.username ?? admin.email ?? ''
                   return (
                     <li key={admin.id} className="flex items-center gap-3 px-5 py-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-[11px] font-semibold text-white">
-                        {initials(name)}
-                      </span>
+<UserAvatar name={name} url={admin.avatarUrl} className="h-8 w-8 text-[11px]" tone="sky" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-slate-800">{name}</p>
                         <p className="truncate text-xs text-slate-500">

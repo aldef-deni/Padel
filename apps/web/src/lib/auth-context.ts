@@ -1,4 +1,4 @@
-import type { AdminLoginInput, User } from '@padel/shared'
+import type { AdminLoginInput, AuthResponse, User } from '@padel/shared'
 import { createContext, useContext } from 'react'
 
 export interface AuthContextValue {
@@ -6,6 +6,10 @@ export interface AuthContextValue {
   isLoading: boolean
   login: (input: AdminLoginInput) => Promise<User>
   logout: () => void
+  /** Store a fresh token + user (e.g. after a password change revoked the old token). */
+  setSession: (res: AuthResponse) => void
+  /** Replace the cached signed-in user (after editing the profile or avatar). */
+  updateUser: (user: User) => void
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

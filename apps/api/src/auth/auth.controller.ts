@@ -73,9 +73,8 @@ export class AuthController {
     description: 'Token baru; token lama tidak berlaku lagi',
   })
   @ApiBadRequestResponse({
-    description: 'Password baru tidak valid atau sama dengan yang lama',
+    description: 'Password lama salah, atau password baru tidak valid / sama dengan yang lama',
   })
-  @ApiUnauthorizedResponse({ description: 'Password lama salah' })
   @ApiForbiddenResponse({ description: 'Bukan admin' })
   changePassword(
     @CurrentUser() user: AuthUser,

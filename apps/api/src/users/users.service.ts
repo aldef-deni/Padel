@@ -8,7 +8,9 @@ import type { AuthUser } from '../auth/auth-user.js';
 import { hashPassword } from '../auth/password.js';
 import { normalizePhone } from '../auth/phone.js';
 import { Prisma, Role } from '../generated/prisma/client.js';
+import { userAvatarUrl } from '../common/avatar-url.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { AvatarStorage } from '../profile/avatar-storage.service.js';
 import {
   CreateUserDto,
   ListUsersQuery,
@@ -35,7 +37,10 @@ interface Shape {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly avatars: AvatarStorage,
+  ) {}
 
   async list(query: ListUsersQuery): Promise<UserListResponseEntity> {
     const page = query.page ?? 1;
@@ -192,6 +197,7 @@ export class UsersService {
       );
     }
     await this.prisma.user.delete({ where: { id } });
+    await this.avatars.remove(user.avatarFile);
   }
 
   private async findRow(id: string): Promise<UserRow> {
@@ -284,6 +290,7 @@ function toEntity(user: UserRow): ManagedUserEntity {
     club: user.club,
     isActive: user.isActive,
     hasPassword: !!user.passwordHash,
+    avatarUrl: userAvatarUrl(user),
     lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
