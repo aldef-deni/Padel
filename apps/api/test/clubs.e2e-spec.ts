@@ -14,6 +14,7 @@ describe('Clubs management (e2e)', () => {
   let prisma: PrismaService;
   const run = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
   const password = 'rahasia-e2e-123';
+  const playerPhone = `+62819${Math.floor(1e7 + Math.random() * 9e7)}`;
   let superToken: string;
   let clubAdminToken: string;
   let clubId: string;
@@ -47,10 +48,7 @@ describe('Clubs management (e2e)', () => {
     await prisma.court.deleteMany({ where: { club: clubs } });
     await prisma.user.deleteMany({
       where: {
-        OR: [
-          { username: { contains: run } },
-          { phone: { contains: run.slice(0, 4) } },
-        ],
+        OR: [{ username: { contains: run } }, { phone: playerPhone }],
       },
     });
     await prisma.club.deleteMany({ where: clubs });
@@ -188,7 +186,7 @@ describe('Clubs management (e2e)', () => {
     ).body;
     const player = await prisma.user.create({
       data: {
-        phone: `+62819${run.slice(0, 4).replace(/\D/g, '1')}${Date.now() % 100000}`,
+        phone: playerPhone,
         role: Role.PLAYER,
       },
     });
