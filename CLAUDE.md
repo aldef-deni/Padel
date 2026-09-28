@@ -48,7 +48,6 @@ SUPER_ADMIN (pemilik platform), CLUB_ADMIN (pengelola klub), PLAYER (pemain).
 
 ## Backlog
 - Login pemain lewat OTP WhatsApp/SMS (pilihan channel) setelah penyedia dipilih; sementara lewat email.
-- Isi SMTP produksi (SMTP_HOST dkk. di apps/api/.env) agar kode masuk benar-benar terkirim ke email.
 - Refresh token (sekarang hanya access token 7 hari).
 - Pembersihan berkala tabel OtpCode (kode kedaluwarsa/terpakai).
 - Ganti password akun seed (admin@padel.local, klub@padel.local) sebelum go-live.
