@@ -1,7 +1,9 @@
 import type { Club, CreateClubInput } from '@padel/shared'
-import { AtSign, Clock, Globe, Link2, Mail, MapPin, Phone } from 'lucide-react'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { AtSign, Clock, Globe, ImagePlus, Link2, Mail, MapPin, Phone, Trash2, Upload } from 'lucide-react'
+import { useEffect, useRef, useState, type DragEvent, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { api } from '../lib/api'
 import { clubErrorMessage, slugify, TIMEZONES } from '../lib/clubs'
 import { useCreateClub, useUpdateClub } from '../lib/queries'
 import { Modal } from './Modal'
@@ -9,6 +11,8 @@ import { Button, ErrorText, Field, Input, Select } from './ui'
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
 const URL_RE = /^https?:\/\/\S+$/i
+const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+const MAX_LOGO_BYTES = 1024 * 1024
 
 /** Create (club = null) or edit a club profile. */
 export function ClubFormDialog({
@@ -21,9 +25,40 @@ export function ClubFormDialog({
   onSaved?: (club: Club) => void
 }) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const create = useCreateClub()
   const update = useUpdateClub()
   const isEdit = !!club
+  // The club as stored: the edited club, or the new one once created. A retry after a failed
+  // logo upload then updates it instead of creating it twice.
+  const [saved, setSaved] = useState<Club | null>(club)
+  const [pending, setPending] = useState(false)
+  const [saveError, setSaveError] = useState<{ error: unknown; logoOnly: boolean } | null>(null)
+
+  // Logo is staged here and uploaded on save.
+  const [logo, setLogo] = useState<{ file: File; url: string } | null>(null)
+  const [removeLogo, setRemoveLogo] = useState(false)
+  const [logoError, setLogoError] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
+  useEffect(() => () => {
+    if (logo) URL.revokeObjectURL(logo.url)
+  }, [logo])
+  const currentLogo = logo?.url ?? (removeLogo ? null : (saved?.logoUrl ?? null))
+
+  const pickLogo = (file: File | undefined) => {
+    if (!file) return
+    if (!LOGO_TYPES.includes(file.type)) return setLogoError(t('clubs.errors.logoType'))
+    if (file.size > MAX_LOGO_BYTES) return setLogoError(t('clubs.errors.logoSize'))
+    setLogoError(null)
+    setRemoveLogo(false)
+    setLogo({ file, url: URL.createObjectURL(file) })
+  }
+  const onDrop = (e: DragEvent) => {
+    e.preventDefault()
+    setDragging(false)
+    pickLogo(e.dataTransfer.files[0])
+  }
 
   const [form, setForm] = useState({
     name: club?.name ?? '',
@@ -58,13 +93,10 @@ export function ClubFormDialog({
     return null
   }
   const clientError = submitted ? validate() : null
-  const serverError = create.error ?? update.error
-  const pending = create.isPending || update.isPending
-
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setSubmitted(true)
-    if (validate()) return
+    if (validate() || pending) return
     const orNull = (v: string) => v.trim() || null
     const input: CreateClubInput = {
       name: form.name.trim(),
@@ -80,15 +112,42 @@ export function ClubFormDialog({
       instagram: orNull(form.instagram),
       openTime: orNull(form.openTime),
       closeTime: orNull(form.closeTime),
-      ...(isEdit ? { isActive: form.isActive } : {}),
+      ...(saved ? { isActive: form.isActive } : {}),
     }
-    const done = (saved: Club) => {
-      onSaved?.(saved)
+
+    setPending(true)
+    setSaveError(null)
+    let current = saved
+    try {
+      current = current ? await update.mutateAsync({ id: current.id, ...input }) : await create.mutateAsync(input)
+      setSaved(current)
+    } catch (error) {
+      setSaveError({ error, logoOnly: false })
+      setPending(false)
+      return
+    }
+    try {
+      if (logo) {
+        const body = new FormData()
+        body.append('file', logo.file)
+        current = await api<Club>(`/clubs/${current.id}/logo`, { method: 'POST', body })
+      } else if (removeLogo && current.logoUrl) {
+        await api<void>(`/clubs/${current.id}/logo`, { method: 'DELETE' })
+      }
+      await queryClient.invalidateQueries({ queryKey: ['clubs'] })
+      onSaved?.(current)
       onClose()
+    } catch (error) {
+      setSaveError({ error, logoOnly: true })
+    } finally {
+      setPending(false)
     }
-    if (isEdit) update.mutate({ id: club.id, ...input }, { onSuccess: done })
-    else create.mutate(input, { onSuccess: done })
   }
+  const serverError = saveError
+    ? saveError.logoOnly
+      ? t('clubs.errors.logoFailed', { message: clubErrorMessage(saveError.error, t) })
+      : clubErrorMessage(saveError.error, t)
+    : null
 
   const timezones = TIMEZONES.some((z) => z.value === form.timezone)
     ? TIMEZONES
@@ -105,13 +164,75 @@ export function ClubFormDialog({
             {t('common.cancel')}
           </Button>
           <Button type="submit" form="club-form" disabled={pending}>
-            {pending ? t('clubs.saving') : isEdit ? t('clubs.save') : t('clubs.create')}
+            {pending ? t('clubs.saving') : saved ? t('clubs.save') : t('clubs.create')}
           </Button>
         </>
       }
     >
       <form id="club-form" onSubmit={onSubmit} className="space-y-6" noValidate>
         <Section title={t('clubs.sectionIdentity')}>
+          <div className="space-y-1.5">
+            <span className="text-sm font-medium text-slate-700">{t('clubs.logoField')}</span>
+            <div
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragging(true)
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={onDrop}
+              className={`flex items-center gap-4 rounded-xl border border-dashed p-3 transition ${
+                dragging ? 'border-emerald-500 bg-emerald-50/60' : 'border-slate-300 bg-slate-50/50'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 text-slate-400 hover:border-emerald-400 hover:text-emerald-600"
+                aria-label={currentLogo ? t('clubs.changeLogo') : t('clubs.chooseLogo')}
+              >
+                {currentLogo ? (
+                  <img src={currentLogo} alt="" className="max-h-full max-w-full object-contain" data-testid="logo-preview" />
+                ) : (
+                  <ImagePlus className="h-7 w-7" />
+                )}
+              </button>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => fileInput.current?.click()}>
+                    <Upload className="h-3.5 w-3.5" />
+                    {currentLogo ? t('clubs.changeLogo') : t('clubs.chooseLogo')}
+                  </Button>
+                  {currentLogo && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setLogo(null)
+                        setRemoveLogo(true)
+                        setLogoError(null)
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {t('clubs.removeLogoShort')}
+                    </Button>
+                  )}
+                </div>
+                <p className="mt-1.5 text-xs text-slate-500">{logo ? logo.file.name : t('clubs.logoHint')}</p>
+                {logoError && <p className="mt-1 text-xs font-medium text-red-600">{logoError}</p>}
+              </div>
+              <input
+                ref={fileInput}
+                type="file"
+                accept={LOGO_TYPES.join(',')}
+                className="hidden"
+                aria-label={t('clubs.logoField')}
+                onChange={(e) => {
+                  pickLogo(e.target.files?.[0])
+                  e.target.value = ''
+                }}
+              />
+            </div>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t('clubs.name')}>
               <Input
@@ -239,7 +360,7 @@ export function ClubFormDialog({
           )}
         </Section>
 
-        {(clientError || serverError) && <ErrorText>{clientError ?? clubErrorMessage(serverError, t)}</ErrorText>}
+        {(clientError || serverError) && <ErrorText>{clientError ?? serverError}</ErrorText>}
       </form>
     </Modal>
   )

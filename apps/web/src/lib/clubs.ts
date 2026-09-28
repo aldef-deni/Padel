@@ -28,7 +28,9 @@ export function clubErrorMessage(error: unknown, t: TFunction): string {
       if (m) return t('clubs.errors.notEmpty', { courts: m[1], admins: m[2] })
       return t('clubs.errors.slugTaken')
     }
+    if (error.status === 413) return t('clubs.errors.logoSize')
     if (error.status === 400) {
+      if (/Logo must be/i.test(message)) return t('clubs.errors.logoType')
       if (/Time must be|openTime|closeTime/i.test(message)) return t('clubs.errors.time')
       if (/website|mapsUrl/i.test(message)) return t('clubs.errors.url')
       if (/phone must be/i.test(message)) return t('clubs.errors.phone')
