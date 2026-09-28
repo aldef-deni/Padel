@@ -1,31 +1,14 @@
 import { useId } from 'react'
-import { logoImage } from '../lib/brand-assets'
+import { brandLogo, brandMark } from '../lib/brand-assets'
 
-/** Platform mark: custom logo if provided, otherwise a drawn padel ball. */
+/** Aldef Tech emblem (small spots: sidebar, mobile header). */
 export function BrandMark({ className = 'h-9 w-9' }: { className?: string }) {
-  // Unique per instance: SVG ids are document-global, and an id defined inside a hidden
-  // (display:none) copy, e.g. the desktop sidebar on mobile, would not render for the others.
-  const bg = `bm-bg-${useId()}`
-  if (logoImage) return <img src={logoImage} alt="" className={`${className} object-contain`} />
-  return (
-    <svg viewBox="0 0 40 40" className={className} aria-hidden="true">
-      <defs>
-        <linearGradient id={bg} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#10b981" />
-          <stop offset="1" stopColor="#047857" />
-        </linearGradient>
-      </defs>
-      <rect width="40" height="40" rx="11" fill={`url(#${bg})`} />
-      <circle cx="20" cy="20" r="10.5" fill="#d4f25a" />
-      <path
-        d="M11.2 14.6c4.6 2.2 7 6.1 7 10.9 0 1.2-.2 2.4-.5 3.5M28.8 25.4c-4.6-2.2-7-6.1-7-10.9 0-1.2.2-2.4.5-3.5"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
+  return <img src={brandMark} alt="" className={`${className} object-contain`} />
+}
+
+/** Full Aldef Tech logo (emblem + wordmark). */
+export function BrandLogo({ className = 'h-16' }: { className?: string }) {
+  return <img src={brandLogo} alt="Aldef Tech" className={`${className} w-auto object-contain`} />
 }
 
 /**

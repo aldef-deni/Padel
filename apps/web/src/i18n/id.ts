@@ -1,5 +1,5 @@
 export const id = {
-  app: { name: 'Padel Replay', admin: 'Admin', console: 'Admin Console' },
+  app: { name: 'Padel Replay', admin: 'Admin', console: 'Admin Console', by: 'oleh Aldef Tech' },
   nav: {
     dashboard: 'Dashboard',
     courts: 'Lapangan',

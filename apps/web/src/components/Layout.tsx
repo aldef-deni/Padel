@@ -95,7 +95,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         <BrandMark className="h-9 w-9" />
         <div className="min-w-0">
           <p className="truncate font-semibold tracking-tight text-white">{t('app.name')}</p>
-          <p className="text-xs text-slate-500">{t('app.console')}</p>
+          <p className="text-xs text-slate-500">{t('app.by')}</p>
         </div>
         {onClose && (
           <button

@@ -2,7 +2,7 @@ import { ArrowRight, Eye, EyeOff, Loader2, Lock, Radio, RotateCcw, Tv, User } fr
 import { useState, type ComponentType, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useLocation, useNavigate } from 'react-router'
-import { BrandMark, CourtGraphic } from '../components/brand'
+import { BrandLogo, CourtGraphic } from '../components/brand'
 import { Button, ErrorText, Field, Input } from '../components/ui'
 import { LANGUAGES, setLanguage } from '../i18n'
 import { loginHeroImage } from '../lib/brand-assets'
@@ -43,16 +43,17 @@ export function LoginPage() {
       <BrandPanel />
 
       <main className="relative flex flex-col px-6 py-8 sm:px-12">
-        <div className="flex items-center justify-between lg:justify-end">
-          <div className="flex items-center gap-2.5 lg:hidden">
-            <BrandMark className="h-8 w-8" />
-            <span className="font-semibold tracking-tight">{t('app.name')}</span>
-          </div>
+        <div className="flex justify-end">
           <LanguageToggle />
         </div>
 
         <div className="flex flex-1 items-center justify-center py-10">
           <div className="w-full max-w-[380px]">
+            {/* On mobile the brand panel is hidden: show the logo above the form instead. */}
+            <div className="mb-8 flex flex-col items-center gap-2 lg:hidden">
+              <BrandLogo className="h-28" />
+              <p className="text-xs font-semibold tracking-[0.25em] text-slate-400 uppercase">{t('app.name')}</p>
+            </div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{t('login.title')}</h1>
             <p className="mt-2 text-sm leading-relaxed text-slate-500">{t('login.subtitle')}</p>
 
@@ -154,9 +155,12 @@ function BrandPanel() {
         </>
       )}
 
-      <div className="relative flex items-center gap-3">
-        <BrandMark className="h-10 w-10" />
-        <span className="text-lg font-semibold tracking-tight">{t('app.name')}</span>
+      <div className="relative flex items-center gap-5">
+        <BrandLogo className="h-28 drop-shadow-[0_0_24px_rgba(168,85,247,0.35)] xl:h-32" />
+        <div className="border-l border-white/15 pl-5">
+          <p className="text-xl font-semibold tracking-tight">{t('app.name')}</p>
+          <p className="text-sm text-slate-400">{t('app.by')}</p>
+        </div>
       </div>
 
       <div className="relative mt-auto max-w-lg">

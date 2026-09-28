@@ -3,7 +3,7 @@ import type { id } from './id'
 type Messages<T> = { [K in keyof T]: T[K] extends string ? string : Messages<T[K]> }
 
 export const en: Messages<typeof id> = {
-  app: { name: 'Padel Replay', admin: 'Admin', console: 'Admin Console' },
+  app: { name: 'Padel Replay', admin: 'Admin', console: 'Admin Console', by: 'by Aldef Tech' },
   nav: {
     dashboard: 'Dashboard',
     courts: 'Courts',
