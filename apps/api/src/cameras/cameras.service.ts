@@ -4,14 +4,19 @@ import {
   clubScope,
   type AuthUser,
 } from '../auth/auth-user.js';
+import { MediamtxService } from '../media/mediamtx.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { CameraStatusResponseEntity } from './entities/camera-status.entity.js';
 import { CreateCameraDto } from './dto/create-camera.dto.js';
 import { ListCamerasQuery } from './dto/list-cameras.query.js';
 import { UpdateCameraDto } from './dto/update-camera.dto.js';
 
 @Injectable()
 export class CamerasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mediamtx: MediamtxService,
+  ) {}
 
   async create(user: AuthUser, dto: CreateCameraDto) {
     await this.assertCourtAccess(user, dto.courtId);
@@ -20,9 +25,39 @@ export class CamerasService {
 
   findAll(user: AuthUser, query: ListCamerasQuery) {
     return this.prisma.camera.findMany({
-      where: { courtId: query.courtId, court: { clubId: clubScope(user) } },
+      where: {
+        courtId: query.courtId,
+        court: { AND: [{ clubId: clubScope(user) }, { clubId: query.clubId }] },
+      },
       orderBy: { streamPath: 'asc' },
     });
+  }
+
+  /** Live status of the cameras the user can see, from MediaMTX. */
+  async status(
+    user: AuthUser,
+    query: ListCamerasQuery,
+  ): Promise<CameraStatusResponseEntity> {
+    const [cameras, paths] = await Promise.all([
+      this.findAll(user, query),
+      this.mediamtx.getPaths(),
+    ]);
+    return {
+      mediaServerReachable: paths !== null,
+      cameras: cameras.map((camera) => {
+        const path = paths?.get(camera.streamPath);
+        return {
+          cameraId: camera.id,
+          streamPath: camera.streamPath,
+          online: path?.online ?? false,
+          onlineSince: path?.online ? path.onlineSince : null,
+          tracks: path?.tracks ?? [],
+          video: path?.video ?? null,
+          bytesReceived: path?.bytesReceived ?? 0,
+          readers: path?.readers ?? 0,
+        };
+      }),
+    };
   }
 
   async findOne(user: AuthUser, id: string) {

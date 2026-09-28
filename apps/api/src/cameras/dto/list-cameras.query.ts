@@ -7,4 +7,10 @@ export class ListCamerasQuery {
   @IsString()
   @IsNotEmpty()
   courtId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter kamera per klub' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  clubId?: string;
 }

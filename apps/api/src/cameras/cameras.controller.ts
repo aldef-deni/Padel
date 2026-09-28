@@ -28,6 +28,7 @@ import { CamerasService } from './cameras.service.js';
 import { CreateCameraDto } from './dto/create-camera.dto.js';
 import { ListCamerasQuery } from './dto/list-cameras.query.js';
 import { UpdateCameraDto } from './dto/update-camera.dto.js';
+import { CameraStatusResponseEntity } from './entities/camera-status.entity.js';
 import { CameraEntity } from './entities/camera.entity.js';
 
 @ApiTags('cameras')
@@ -53,6 +54,12 @@ export class CamerasController {
   @ApiOkResponse({ type: [CameraEntity] })
   findAll(@CurrentUser() user: AuthUser, @Query() query: ListCamerasQuery) {
     return this.cameras.findAll(user, query);
+  }
+
+  @Get('status')
+  @ApiOkResponse({ type: CameraStatusResponseEntity })
+  status(@CurrentUser() user: AuthUser, @Query() query: ListCamerasQuery) {
+    return this.cameras.status(user, query);
   }
 
   @Get(':id')

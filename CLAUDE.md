@@ -45,3 +45,6 @@ SUPER_ADMIN (pemilik platform), CLUB_ADMIN (pengelola klub), PLAYER (pemain).
 - Pembersihan berkala tabel OtpCode (kode kedaluwarsa/terpakai).
 - Set `trust proxy` saat deploy di belakang reverse proxy, agar rate limit memakai IP klien asli.
 - Ganti password akun seed (admin@padel.local, klub@padel.local) sebelum go-live.
+- Reverse proxy produksi (nginx) untuk web + `/api` + `/media/webrtc` + `/media/hls`,
+  meniru proxy di apps/web/vite.config.ts (termasuk rewrite header Location).
+- Audio di WebRTC: kamera kirim AAC (tidak didukung WebRTC); perlu transcode ke Opus jika audio live dibutuhkan.

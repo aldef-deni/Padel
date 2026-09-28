@@ -83,6 +83,9 @@ describe('API (e2e)', () => {
       },
     });
     await prisma.otpCode.deleteMany({ where: { phone: { in: phones } } });
+    await prisma.camera.deleteMany({
+      where: { court: { clubId: { in: [ownClubId, otherClubId] } } },
+    });
     await prisma.court.deleteMany({
       where: { clubId: { in: [ownClubId, otherClubId] } },
     });
@@ -359,6 +362,48 @@ describe('API (e2e)', () => {
         .get(`/api/clubs/${club.id}`)
         .set(auth(superToken))
         .expect(404);
+    });
+  });
+
+  describe('camera status', () => {
+    it('reports offline cameras from MediaMTX, scoped per club', async () => {
+      const court = await prisma.court.create({
+        data: { clubId: otherClubId, name: 'Lapangan Status' },
+      });
+      const camera = await prisma.camera.create({
+        data: {
+          courtId: court.id,
+          name: 'Kamera Status',
+          streamPath: `court-status-${run}`,
+        },
+      });
+
+      const res = await request(server())
+        .get(`/api/cameras/status?clubId=${otherClubId}`)
+        .set(auth(superToken))
+        .expect(200);
+      expect(res.body.mediaServerReachable).toBe(true);
+      expect(res.body.cameras).toEqual([
+        {
+          cameraId: camera.id,
+          streamPath: camera.streamPath,
+          online: false,
+          onlineSince: null,
+          tracks: [],
+          video: null,
+          bytesReceived: 0,
+          readers: 0,
+        },
+      ]);
+
+      // A club admin never sees another club's cameras.
+      const own = await request(server())
+        .get('/api/cameras/status')
+        .set(auth(clubAdminToken))
+        .expect(200);
+      expect(
+        own.body.cameras.map((c: { cameraId: string }) => c.cameraId),
+      ).not.toContain(camera.id);
     });
   });
 

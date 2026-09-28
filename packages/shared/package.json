@@ -1,0 +1,16 @@
+{
+  "name": "@padel/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tipe TypeScript bersama API & web (format JSON dari API)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.2"
+  }
+}
