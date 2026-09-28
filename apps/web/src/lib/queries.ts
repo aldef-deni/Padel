@@ -26,6 +26,10 @@ import type {
   RequestReplayInput,
   Session,
   SessionQr,
+  CreateTournamentInput,
+  TournamentDetail,
+  TournamentListQuery,
+  TournamentListResponse,
   TvLink,
   TvSnapshot,
   UpdateCameraInput,
@@ -402,5 +406,64 @@ export function useRemovePlayer(clubId: string) {
   return useMutation({
     mutationFn: (id: string) => api<void>(`/clubs/${clubId}/players/${id}`, { method: 'DELETE' }),
     onSuccess: invalidate,
+  })
+}
+
+// ---- Turnamen ----
+
+export function useTournaments(query: TournamentListQuery) {
+  const params = new URLSearchParams()
+  if (query.clubId) params.set('clubId', query.clubId)
+  if (query.status) params.set('status', query.status)
+  if (query.search) params.set('search', query.search)
+  params.set('page', String(query.page ?? 1))
+  params.set('pageSize', String(query.pageSize ?? 12))
+  return useQuery({
+    queryKey: ['tournaments', query],
+    queryFn: () => api<TournamentListResponse>(`/tournaments?${params}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useTournament(id: string) {
+  return useQuery({ queryKey: ['tournament', id], queryFn: () => api<TournamentDetail>(`/tournaments/${id}`) })
+}
+
+export function usePublicTournament(slug: string) {
+  return useQuery({
+    queryKey: ['public-tournament', slug],
+    queryFn: () => api<TournamentDetail>(`/public/tournaments/${slug}`),
+    refetchInterval: 30_000,
+    retry: (count, error) => !(error instanceof ApiRequestError && error.status === 404) && count < 3,
+  })
+}
+
+export function useCreateTournament() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateTournamentInput) => api<TournamentDetail>('/tournaments', { method: 'POST', body: input }),
+    onSuccess: (t) => {
+      queryClient.setQueryData(['tournament', t.id], t)
+      void queryClient.invalidateQueries({ queryKey: ['tournaments'] })
+    },
+  })
+}
+
+/**
+ * Every tournament action returns the full detail: store it and refresh the list.
+ * `call` receives a small API helper scoped to the tournament.
+ */
+export function useTournamentAction<V>(
+  id: string,
+  call: (req: (path: string, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown) => Promise<TournamentDetail>, vars: V) => Promise<TournamentDetail | void>,
+) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: V) =>
+      call((path, method, body) => api<TournamentDetail>(`/tournaments/${id}${path}`, { method, body }), vars),
+    onSuccess: (t) => {
+      if (t) queryClient.setQueryData(['tournament', id], t)
+      void queryClient.invalidateQueries({ queryKey: ['tournaments'] })
+    },
   })
 }

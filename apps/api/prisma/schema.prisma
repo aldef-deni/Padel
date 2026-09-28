@@ -48,9 +48,10 @@ model Club {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  courts  Court[]
-  admins  User[]
-  members ClubMember[]
+  courts      Court[]
+  admins      User[]
+  members     ClubMember[]
+  tournaments Tournament[]
 }
 
 model Court {
@@ -60,9 +61,10 @@ model Court {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  club     Club      @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  club     Club              @relation(fields: [clubId], references: [id], onDelete: Restrict)
   cameras  Camera[]
   sessions Session[]
+  matches  TournamentMatch[]
 
   @@unique([clubId, name])
 }
@@ -106,10 +108,12 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  club        Club?           @relation(fields: [clubId], references: [id], onDelete: SetNull)
+  club        Club?            @relation(fields: [clubId], references: [id], onDelete: SetNull)
   sessions    SessionPlayer[]
   clips       Clip[]
   memberships ClubMember[]
+  teamsAsP1   TournamentTeam[] @relation("TeamPlayer1")
+  teamsAsP2   TournamentTeam[] @relation("TeamPlayer2")
 }
 
 // Pemain yang terdaftar di sebuah klub (ditambah admin klub, atau otomatis saat join sesi via QR).
@@ -202,4 +206,165 @@ model Clip {
 
   @@index([sessionId])
   @@index([status])
+}
+
+// ---- Turnamen ----
+
+enum TournamentFormat {
+  // Sistem gugur
+  SINGLE_ELIMINATION
+  // Setengah kompetisi (semua bertemu semua)
+  ROUND_ROBIN
+  // Fase grup lalu sistem gugur
+  GROUPS_KNOCKOUT
+}
+
+enum TournamentStatus {
+  DRAFT
+  REGISTRATION
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum TournamentTeamStatus {
+  REGISTERED
+  CONFIRMED
+  WITHDRAWN
+}
+
+enum TournamentStage {
+  GROUP
+  KNOCKOUT
+}
+
+enum TournamentMatchStatus {
+  SCHEDULED
+  COMPLETED
+  // Menang tanpa bertanding (lawan mundur / tidak hadir)
+  WALKOVER
+  // Slot kosong di bagan: tim lolos otomatis
+  BYE
+}
+
+model Tournament {
+  id                   String           @id @default(cuid())
+  clubId               String
+  name                 String
+  // Dipakai di URL publik /t/<slug>
+  slug                 String           @unique
+  category             String?
+  description          String?
+  startDate            DateTime
+  endDate              DateTime?
+  registrationDeadline DateTime?
+  format               TournamentFormat
+  status               TournamentStatus @default(DRAFT)
+  maxTeams             Int?
+  // Rupiah
+  entryFee             Int?
+  prizeInfo            String?
+  isPublic             Boolean          @default(true)
+  // Aturan skor: best of (2 * setsToWin - 1) set
+  setsToWin            Int              @default(2)
+  gamesPerSet          Int              @default(6)
+  // Set penentu dimainkan sebagai super tie-break (sampai 10, selisih 2)
+  superTiebreak        Boolean          @default(true)
+  goldenPoint          Boolean          @default(true)
+  // Fase grup
+  groupCount           Int              @default(2)
+  advancePerGroup      Int              @default(2)
+  thirdPlaceMatch      Boolean          @default(false)
+  championTeamId       String?          @unique
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  club     Club              @relation(fields: [clubId], references: [id], onDelete: Restrict)
+  champion TournamentTeam?   @relation("TournamentChampion", fields: [championTeamId], references: [id], onDelete: SetNull)
+  teams    TournamentTeam[]
+  groups   TournamentGroup[]
+  matches  TournamentMatch[]
+
+  @@index([clubId, status])
+}
+
+model TournamentTeam {
+  id           String               @id @default(cuid())
+  tournamentId String
+  name         String
+  player1Name  String
+  player2Name  String
+  // Opsional: tautan ke akun pemain
+  player1Id    String?
+  player2Id    String?
+  seed         Int?
+  status       TournamentTeamStatus @default(REGISTERED)
+  paid         Boolean              @default(false)
+  note         String?
+  groupId      String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  tournament Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  group      TournamentGroup?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  player1    User?             @relation("TeamPlayer1", fields: [player1Id], references: [id], onDelete: SetNull)
+  player2    User?             @relation("TeamPlayer2", fields: [player2Id], references: [id], onDelete: SetNull)
+  championOf Tournament?       @relation("TournamentChampion")
+  matchesA   TournamentMatch[] @relation("MatchTeamA")
+  matchesB   TournamentMatch[] @relation("MatchTeamB")
+  matchesWon TournamentMatch[] @relation("MatchWinner")
+
+  @@unique([tournamentId, name])
+  @@index([tournamentId])
+}
+
+model TournamentGroup {
+  id           String @id @default(cuid())
+  tournamentId String
+  // "A", "B", ...
+  name         String
+  order        Int
+
+  tournament Tournament        @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teams      TournamentTeam[]
+  matches    TournamentMatch[]
+
+  @@unique([tournamentId, name])
+}
+
+model TournamentMatch {
+  id               String                @id @default(cuid())
+  tournamentId     String
+  stage            TournamentStage
+  groupId          String?
+  // Grup: pekan/putaran; gugur: babak (1 = babak pertama)
+  round            Int
+  // Urutan di dalam babak
+  position         Int
+  teamAId          String?
+  teamBId          String?
+  courtId          String?
+  scheduledAt      DateTime?
+  status           TournamentMatchStatus @default(SCHEDULED)
+  // [{ "a": 6, "b": 4 }, ...]
+  sets             Json?
+  winnerId         String?
+  // Sistem gugur: pemenang maju ke nextMatchId di slot "A"/"B"
+  nextMatchId      String?
+  nextSlot         String?
+  // Semifinal: yang kalah ke perebutan juara 3
+  loserNextMatchId String?
+  loserNextSlot    String?
+  isThirdPlace     Boolean               @default(false)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  tournament Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  group      TournamentGroup? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teamA      TournamentTeam?  @relation("MatchTeamA", fields: [teamAId], references: [id], onDelete: SetNull)
+  teamB      TournamentTeam?  @relation("MatchTeamB", fields: [teamBId], references: [id], onDelete: SetNull)
+  winner     TournamentTeam?  @relation("MatchWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  court      Court?           @relation(fields: [courtId], references: [id], onDelete: SetNull)
+
+  @@index([tournamentId, stage, round])
 }

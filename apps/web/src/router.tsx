@@ -15,11 +15,16 @@ import { ProfilePage } from './pages/ProfilePage'
 import { ClubsPage } from './pages/ClubsPage'
 import { ClubDetailPage } from './pages/ClubDetailPage'
 import { RequireSuperAdmin } from './components/RequireSuperAdmin'
+import { TournamentsPage } from './pages/TournamentsPage'
+import { TournamentDetailPage } from './pages/TournamentDetailPage'
+import { PublicTournamentPage } from './pages/PublicTournamentPage'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   // Kiosk: authorized by the TV link key, no login and no admin layout.
   { path: '/tv/:clubId', element: <TvPage /> },
+  // Public tournament page: bracket, standings, schedule. No login.
+  { path: '/t/:slug', element: <PublicTournamentPage /> },
   {
     element: <RequireAdmin />,
     children: [
@@ -32,6 +37,8 @@ export const router = createBrowserRouter([
           { path: 'courts/:courtId/session', element: <SessionPage /> },
           { path: 'cameras', element: <CamerasPage /> },
           { path: 'players', element: <PlayersPage /> },
+          { path: 'tournaments', element: <TournamentsPage /> },
+          { path: 'tournaments/:id', element: <TournamentDetailPage /> },
           { path: 'profile', element: <ProfilePage /> },
           { path: 'tv-setup', element: <TvSetupPage /> },
           {

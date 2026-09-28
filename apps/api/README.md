@@ -41,6 +41,7 @@ pnpm start:dev
 | Camera | `/api/cameras?courtId=&clubId=`, `/api/cameras/:id` | `streamPath` unik, pola `court-<id>` |
 | Status kamera | `GET /api/cameras/status?clubId=` | online/offline dari API MediaMTX |
 | Sesi & replay | lihat di bawah | |
+| Turnamen | lihat di bawah | |
 
 Club/Court/Camera hanya untuk admin (lihat Autentikasi). Semua resource: `POST`, `GET`, `GET :id`, `PATCH :id`, `DELETE :id` (204).
 Error: 400 validasi / relasi tidak ada, 404 tidak ditemukan, 409 duplikat atau masih dipakai
@@ -139,6 +140,30 @@ PLAYER wajib nomor HP (login OTP) dan tanpa password. `isActive: false` menolak 
 mencabut token yang ada. Pengaman: tidak bisa mengubah role/menonaktifkan/menghapus akun sendiri, tidak
 bisa menghilangkan super admin aktif terakhir, dan pengguna yang punya klip tidak bisa dihapus (409,
 nonaktifkan saja). Username/email/telepon unik (409).
+
+## Turnamen (CLUB_ADMIN untuk klubnya, SUPER_ADMIN semua klub)
+
+Format: `SINGLE_ELIMINATION` (sistem gugur, bye otomatis untuk unggulan, opsional perebutan juara 3),
+`ROUND_ROBIN` (semua bertemu semua, juara dari klasemen), `GROUPS_KNOCKOUT` (fase grup lalu gugur; A1 bertemu B2).
+Status: `DRAFT` → `REGISTRATION` → `ONGOING` (setelah undian) → `COMPLETED` (otomatis saat juara diketahui);
+`CANCELLED` bisa dari status apa pun kecuali selesai.
+
+| Endpoint | Keterangan |
+|---|---|
+| `GET /api/tournaments?clubId=&status=&search=&page=&pageSize=` | Daftar + `counts` per status, progres pertandingan, nama juara |
+| `POST /api/tournaments` | Buat (`clubId`, `name`, `startDate`, `format`, aturan skor, grup, kuota, biaya, hadiah, `isPublic`) |
+| `GET/PATCH/DELETE /api/tournaments/:id` | Detail lengkap (tim, grup + klasemen, pertandingan); format & aturan skor terkunci setelah undian (409); hapus ditolak saat berjalan/selesai (409) |
+| `POST /api/tournaments/:id/status` | `{ status: DRAFT \| REGISTRATION \| CANCELLED }` |
+| `POST /api/tournaments/:id/teams`, `PATCH/DELETE .../teams/:teamId` | Tim: 2 pemain (opsional ditautkan ke akun pemain klub), seed, status, sudah bayar, catatan; tambah/hapus hanya sebelum undian |
+| `POST /api/tournaments/:id/draw` `{ shuffle }`, `DELETE .../draw` | Undian: seed ditempatkan, sisanya diacak; batal undian hanya jika belum ada hasil |
+| `POST/DELETE /api/tournaments/:id/knockout` | Grup + gugur: buat bagan dari klasemen setelah semua laga grup selesai / hapus bagan |
+| `PATCH /api/tournaments/:id/matches/:matchId` | Jadwal: `courtId` (lapangan klub), `scheduledAt` |
+| `POST/DELETE /api/tournaments/:id/matches/:matchId/result` | Hasil `{ sets: [{a,b}] }` atau `{ walkover: 'A'\|'B' }`; pemenang maju otomatis. Koreksi ditolak (409) jika laga berikutnya sudah ada hasil |
+| `GET /api/public/tournaments/:slug` | **Publik**: bagan, klasemen, jadwal; tanpa id pemain, catatan & status bayar; 404 untuk draft / tidak publik |
+
+Validasi skor: set biasa sampai `gamesPerSet` (mis. 6-4, 7-5, 7-6), set penentu sebagai super tie-break sampai 10
+selisih 2 jika aktif. Klasemen: poin (1 per menang), selisih set, selisih game, head-to-head, game menang, seed.
+Logika murni ada di `src/tournaments/engine.ts` (unit test `engine.spec.ts`).
 
 ## Sesi & replay
 

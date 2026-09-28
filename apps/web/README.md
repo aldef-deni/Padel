@@ -25,6 +25,9 @@ Login dengan akun admin (SUPER_ADMIN atau CLUB_ADMIN). Akun pemain ditolak.
 | `/courts/:id` | Live stream tiap kamera + URL publish kamera |
 | `/tv-setup` | Layar TV: unggah logo klub, buat/ganti link TV |
 | `/tv/:clubId?key=` | **Kiosk TV** (tanpa login): layar idle dengan logo & jam; klip READY diputar otomatis layar penuh (antrean), chip "menyiapkan replay", kembali ke idle setelah selesai |
+| `/tournaments` | Turnamen: daftar per status + pencarian, buat turnamen (format, jadwal, biaya, aturan skor) |
+| `/tournaments/:id` | Kelola turnamen: ringkasan & langkah berikutnya, tim, undian, jadwal & input skor, klasemen, bagan |
+| `/t/:slug` | **Halaman publik turnamen** (tanpa login): bagan, klasemen, jadwal, tim; refresh otomatis 30 detik |
 | `/courts/:id/session` | Sesi & Replay: mulai/akhiri sesi, QR join, simulasi tombol REPLAY, daftar klip (update realtime via Socket.IO, putar & unduh) |
 
 SUPER_ADMIN bisa memilih klub di header; CLUB_ADMIN otomatis ke klubnya.

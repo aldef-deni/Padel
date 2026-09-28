@@ -422,3 +422,165 @@ export interface UpdateClubPlayerInput {
   note?: string | null;
   isBlocked?: boolean;
 }
+
+// ---- Turnamen ----
+
+export const TOURNAMENT_FORMATS = ['SINGLE_ELIMINATION', 'ROUND_ROBIN', 'GROUPS_KNOCKOUT'] as const;
+export type TournamentFormat = (typeof TOURNAMENT_FORMATS)[number];
+export const TOURNAMENT_STATUSES = ['DRAFT', 'REGISTRATION', 'ONGOING', 'COMPLETED', 'CANCELLED'] as const;
+export type TournamentStatus = (typeof TOURNAMENT_STATUSES)[number];
+export type TournamentTeamStatus = 'REGISTERED' | 'CONFIRMED' | 'WITHDRAWN';
+export type TournamentStage = 'GROUP' | 'KNOCKOUT';
+export type TournamentMatchStatus = 'SCHEDULED' | 'COMPLETED' | 'WALKOVER' | 'BYE';
+
+export interface SetScore {
+  a: number;
+  b: number;
+}
+
+/** Pengaturan yang bisa diubah admin. */
+export interface TournamentSettings {
+  name: string;
+  category: string | null;
+  description: string | null;
+  /** Tanggal ISO (YYYY-MM-DD atau datetime). */
+  startDate: IsoDateString;
+  endDate: IsoDateString | null;
+  registrationDeadline: IsoDateString | null;
+  format: TournamentFormat;
+  maxTeams: number | null;
+  /** Rupiah. */
+  entryFee: number | null;
+  prizeInfo: string | null;
+  isPublic: boolean;
+  /** 1 = satu set, 2 = best of 3. */
+  setsToWin: number;
+  /** 4, 6 atau 9 game per set. */
+  gamesPerSet: number;
+  /** Set penentu = super tie-break sampai 10. */
+  superTiebreak: boolean;
+  goldenPoint: boolean;
+  groupCount: number;
+  advancePerGroup: number;
+  thirdPlaceMatch: boolean;
+}
+
+export interface TournamentSummary extends TournamentSettings {
+  id: string;
+  clubId: string;
+  club: { id: string; name: string; logoUrl: string | null };
+  /** URL publik: /t/<slug> */
+  slug: string;
+  status: TournamentStatus;
+  /** Tim aktif (tidak termasuk yang mundur). */
+  teamCount: number;
+  matchCount: number;
+  finishedMatchCount: number;
+  championName: string | null;
+  createdAt: IsoDateString;
+  updatedAt: IsoDateString;
+}
+
+export interface TournamentTeam {
+  id: string;
+  name: string;
+  player1Name: string;
+  player2Name: string;
+  /** Hanya untuk admin; null di halaman publik. */
+  player1Id: string | null;
+  player2Id: string | null;
+  seed: number | null;
+  status: TournamentTeamStatus;
+  paid: boolean;
+  note: string | null;
+  groupId: string | null;
+}
+
+export interface TournamentStandingRow {
+  teamId: string;
+  played: number;
+  won: number;
+  lost: number;
+  setsWon: number;
+  setsLost: number;
+  gamesWon: number;
+  gamesLost: number;
+  points: number;
+}
+
+export interface TournamentGroup {
+  id: string;
+  name: string;
+  order: number;
+  standings: TournamentStandingRow[];
+}
+
+export interface TournamentMatch {
+  id: string;
+  stage: TournamentStage;
+  groupId: string | null;
+  round: number;
+  position: number;
+  teamAId: string | null;
+  teamBId: string | null;
+  court: { id: string; name: string } | null;
+  scheduledAt: IsoDateString | null;
+  status: TournamentMatchStatus;
+  sets: SetScore[] | null;
+  winnerId: string | null;
+  nextMatchId: string | null;
+  isThirdPlace: boolean;
+}
+
+export interface TournamentDetail extends TournamentSummary {
+  teams: TournamentTeam[];
+  groups: TournamentGroup[];
+  matches: TournamentMatch[];
+  /** Jumlah babak sistem gugur (0 jika belum ada). */
+  knockoutRounds: number;
+  championTeamId: string | null;
+}
+
+export interface TournamentListQuery {
+  clubId?: string;
+  status?: TournamentStatus;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface TournamentListResponse {
+  items: TournamentSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: Record<TournamentStatus | 'ALL', number>;
+}
+
+export type CreateTournamentInput = Partial<Omit<TournamentSettings, 'name' | 'startDate' | 'format'>> &
+  Pick<TournamentSettings, 'name' | 'startDate' | 'format'> & { clubId: string };
+export type UpdateTournamentInput = Partial<TournamentSettings>;
+
+export interface TournamentTeamInput {
+  /** Default: "Pemain 1 / Pemain 2". */
+  name?: string | null;
+  player1Name: string;
+  player2Name: string;
+  player1Id?: string | null;
+  player2Id?: string | null;
+  seed?: number | null;
+  status?: TournamentTeamStatus;
+  paid?: boolean;
+  note?: string | null;
+}
+
+export interface ScheduleMatchInput {
+  courtId?: string | null;
+  scheduledAt?: IsoDateString | null;
+}
+
+/** Salah satu: skor per set, atau walkover untuk tim A/B. */
+export interface MatchResultInput {
+  sets?: SetScore[];
+  walkover?: 'A' | 'B';
+}

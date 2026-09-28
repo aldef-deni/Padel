@@ -16,6 +16,7 @@ import { UsersModule } from './users/users.module.js';
 import { PlayersModule } from './players/players.module.js';
 import { ProfileModule } from './profile/profile.module.js';
 import { MailModule } from './mail/mail.module.js';
+import { TournamentsModule } from './tournaments/tournaments.module.js';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { MailModule } from './mail/mail.module.js';
     UsersModule,
     PlayersModule,
     ProfileModule,
+    TournamentsModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: HttpThrottlerGuard }],
