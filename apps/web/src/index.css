@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Latar gelap sidebar & panel brand. */
+  --color-ink-950: #060a13;
+  --color-ink-900: #0a1120;
+  --color-ink-800: #111b2f;
+  --color-ink-700: #1a263f;
+
+  /* Aksen bola padel, dipakai sangat hemat. */
+  --color-ball: #d4f25a;
+}
+
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+::selection {
+  @apply bg-emerald-200 text-emerald-950;
 }

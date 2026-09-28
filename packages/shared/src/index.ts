@@ -217,3 +217,25 @@ export interface TvSocketAuth {
   clubId: string;
   tvKey: string;
 }
+
+// ---- Dashboard ----
+
+export interface RecentClip extends Clip {
+  courtId: string;
+  courtName: string;
+  cameraName: string;
+}
+
+/** GET /api/clubs/:id/overview */
+export interface ClubOverview {
+  activeSessions: {
+    sessionId: string;
+    courtId: string;
+    startedAt: IsoDateString;
+    playerCount: number;
+  }[];
+  /** Klip yang diminta hari ini (zona waktu klub). */
+  clipsToday: { total: number; ready: number; failed: number };
+  /** 8 klip terbaru klub, semua status. */
+  recentClips: RecentClip[];
+}

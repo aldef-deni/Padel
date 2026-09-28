@@ -4,6 +4,7 @@ import type {
   CameraStatusResponse,
   Clip,
   Club,
+  ClubOverview,
   Court,
   CreateCameraInput,
   CreateCourtInput,
@@ -229,5 +230,14 @@ export function useTvSnapshot(clubId: string, key: string) {
     refetchInterval: 5 * 60_000,
     retry: (failureCount, error) =>
       !(error instanceof ApiRequestError && error.status === 401) && failureCount < 5,
+  })
+}
+
+/** Dashboard numbers (active sessions, today's replays, latest clips), refreshed every 15 s. */
+export function useClubOverview(clubId: string) {
+  return useQuery({
+    queryKey: ['club-overview', clubId],
+    queryFn: () => api<ClubOverview>(`/clubs/${clubId}/overview`),
+    refetchInterval: 15_000,
   })
 }

@@ -307,6 +307,31 @@ describe('Sessions & replay (e2e)', () => {
       ready.id,
     ]);
 
+    // Dashboard overview for the club.
+    const overview = await request(server())
+      .get(`/api/clubs/${clubId}/overview`)
+      .set(auth(adminToken))
+      .expect(200);
+    expect(overview.body.activeSessions).toEqual([
+      expect.objectContaining({
+        sessionId: session.id,
+        courtId,
+        playerCount: 1,
+      }),
+    ]);
+    expect(overview.body.clipsToday).toEqual({ total: 1, ready: 1, failed: 0 });
+    expect(overview.body.recentClips[0]).toMatchObject({
+      id: ready.id,
+      status: 'READY',
+      courtId,
+      courtName: 'Lapangan Replay',
+      cameraName: 'Cam',
+    });
+    await request(server())
+      .get(`/api/clubs/${clubId}/overview`)
+      .set(auth(otherAdminToken))
+      .expect(403);
+
     // Ending the session closes it for joins and replays.
     await request(server())
       .post(`/api/sessions/${session.id}/end`)

@@ -37,6 +37,7 @@ import { Role } from '../generated/prisma/client.js';
 import { ClubsService } from './clubs.service.js';
 import { CreateClubDto } from './dto/create-club.dto.js';
 import { UpdateClubDto } from './dto/update-club.dto.js';
+import { ClubOverviewEntity } from './entities/club-overview.entity.js';
 import { ClubEntity } from './entities/club.entity.js';
 
 const MAX_LOGO_BYTES = 1024 * 1024;
@@ -97,6 +98,13 @@ export class ClubsController {
   @ApiConflictResponse({ description: 'Klub masih punya lapangan' })
   remove(@Param('id') id: string) {
     return this.clubs.remove(id);
+  }
+
+  @Get(':id/overview')
+  @ApiOkResponse({ type: ClubOverviewEntity })
+  @ApiNotFoundResponse()
+  overview(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.clubs.overview(user, id);
   }
 
   @Post(':id/logo')

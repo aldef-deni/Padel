@@ -8,9 +8,13 @@ import {
   clubScope,
   type AuthUser,
 } from '../auth/auth-user.js';
+import { ClipsService } from '../clips/clips.service.js';
+import { startOfDayIn } from '../common/time.js';
+import { ClipStatus } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateClubDto } from './dto/create-club.dto.js';
 import { UpdateClubDto } from './dto/update-club.dto.js';
+import { ClubOverviewEntity } from './entities/club-overview.entity.js';
 import { ClubEntity, toClubEntity } from './entities/club.entity.js';
 import {
   detectLogoType,
@@ -24,6 +28,7 @@ export class ClubsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly logos: LogoStorage,
+    private readonly clips: ClipsService,
   ) {}
 
   async create(dto: CreateClubDto): Promise<ClubEntity> {
@@ -59,6 +64,60 @@ export class ClubsService {
   async remove(id: string) {
     const club = await this.prisma.club.delete({ where: { id } });
     if (club.logoFile) await this.logos.remove(club.logoFile);
+  }
+
+  /** Dashboard numbers: active sessions, today's replays, latest clips. */
+  async overview(user: AuthUser, id: string): Promise<ClubOverviewEntity> {
+    const club = await this.findRow(user, id);
+    const inClub = { camera: { court: { clubId: id } } };
+    const [sessions, counts, recent] = await Promise.all([
+      this.prisma.session.findMany({
+        where: { endedAt: null, court: { clubId: id } },
+        include: { _count: { select: { players: true } } },
+        orderBy: { startedAt: 'asc' },
+      }),
+      this.prisma.clip.groupBy({
+        by: ['status'],
+        where: { ...inClub, createdAt: { gte: startOfDayIn(club.timezone) } },
+        _count: { _all: true },
+      }),
+      this.prisma.clip.findMany({
+        where: inClub,
+        include: {
+          camera: {
+            select: { name: true, court: { select: { id: true, name: true } } },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+      }),
+    ]);
+
+    const count = (status?: ClipStatus) =>
+      counts
+        .filter((c) => !status || c.status === status)
+        .reduce((sum, c) => sum + c._count._all, 0);
+
+    return {
+      activeSessions: sessions.map((s) => ({
+        sessionId: s.id,
+        courtId: s.courtId,
+        startedAt: s.startedAt.toISOString(),
+        playerCount: s._count.players,
+      })),
+      clipsToday: {
+        total: count(),
+        ready: count(ClipStatus.READY),
+        failed: count(ClipStatus.FAILED),
+      },
+      recentClips: recent.map(({ camera, ...clip }) =>
+        Object.assign(this.clips.toEntity(clip), {
+          courtId: camera.court.id,
+          courtName: camera.court.name,
+          cameraName: camera.name,
+        }),
+      ),
+    };
   }
 
   async setLogo(

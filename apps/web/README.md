@@ -29,6 +29,15 @@ Login dengan akun admin (SUPER_ADMIN atau CLUB_ADMIN). Akun pemain ditolak.
 
 SUPER_ADMIN bisa memilih klub di header; CLUB_ADMIN otomatis ke klubnya.
 
+## Tampilan & gambar brand
+
+Font Inter (self-hosted via `@fontsource-variable/inter`), ikon `lucide-react`, Tailwind v4 dengan token
+warna di `src/index.css`. Shell admin: sidebar gelap (`components/Layout.tsx`), primitive UI di
+`components/ui.tsx`, logo & ilustrasi lapangan SVG di `components/brand.tsx`.
+
+Gambar opsional (lihat `src/assets/brand/README.md`): `login-hero.jpg|webp` untuk panel login dan
+`logo.svg|png` untuk logo platform. Terdeteksi saat build; tanpa file, dipakai ilustrasi SVG.
+
 ## Proxy (vite.config.ts)
 
 | Path di browser | Diteruskan ke |
