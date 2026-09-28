@@ -82,6 +82,9 @@ model User {
   // Token yang dibuat sebelum waktu ini ditolak (logout paksa setelah ganti password).
   passwordChangedAt DateTime?
   role              Role      @default(PLAYER)
+  // false = akun dinonaktifkan: tidak bisa login, token yang ada langsung ditolak.
+  isActive          Boolean   @default(true)
+  lastLoginAt       DateTime?
   // Hanya untuk CLUB_ADMIN: klub yang dikelola.
   clubId            String?
   createdAt         DateTime  @default(now())

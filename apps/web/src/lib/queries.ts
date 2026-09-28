@@ -8,6 +8,11 @@ import type {
   Court,
   CreateCameraInput,
   CreateCourtInput,
+  CreateUserInput,
+  ManagedUser,
+  UpdateUserInput,
+  UserListQuery,
+  UserListResponse,
   RequestReplayInput,
   Session,
   SessionQr,
@@ -16,7 +21,13 @@ import type {
   UpdateCameraInput,
   UpdateCourtInput,
 } from '@padel/shared'
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query'
 import { api, ApiRequestError } from './api'
 
 export const queryKeys = {
@@ -239,5 +250,50 @@ export function useClubOverview(clubId: string) {
     queryKey: ['club-overview', clubId],
     queryFn: () => api<ClubOverview>(`/clubs/${clubId}/overview`),
     refetchInterval: 15_000,
+  })
+}
+
+// ---- Pengguna (SUPER_ADMIN) ----
+
+export function useUsers(query: UserListQuery) {
+  const params = new URLSearchParams()
+  if (query.search) params.set('search', query.search)
+  if (query.role) params.set('role', query.role)
+  params.set('page', String(query.page ?? 1))
+  params.set('pageSize', String(query.pageSize ?? 20))
+  return useQuery({
+    queryKey: ['users', query],
+    queryFn: () => api<UserListResponse>(`/users?${params}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
+function useInvalidateUsers() {
+  const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries({ queryKey: ['users'] })
+}
+
+export function useCreateUser() {
+  const invalidate = useInvalidateUsers()
+  return useMutation({
+    mutationFn: (input: CreateUserInput) => api<ManagedUser>('/users', { method: 'POST', body: input }),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdateUser() {
+  const invalidate = useInvalidateUsers()
+  return useMutation({
+    mutationFn: ({ id, ...input }: UpdateUserInput & { id: string }) =>
+      api<ManagedUser>(`/users/${id}`, { method: 'PATCH', body: input }),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeleteUser() {
+  const invalidate = useInvalidateUsers()
+  return useMutation({
+    mutationFn: (id: string) => api<void>(`/users/${id}`, { method: 'DELETE' }),
+    onSuccess: invalidate,
   })
 }

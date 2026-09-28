@@ -239,3 +239,50 @@ export interface ClubOverview {
   /** 8 klip terbaru klub, semua status. */
   recentClips: RecentClip[];
 }
+
+// ---- Kelola pengguna (SUPER_ADMIN) ----
+
+/** Pengguna seperti dilihat SUPER_ADMIN di menu Pengguna. */
+export interface ManagedUser extends User {
+  isActive: boolean;
+  /** true jika akun punya password (admin). */
+  hasPassword: boolean;
+  lastLoginAt: IsoDateString | null;
+  club: { id: string; name: string } | null;
+  createdAt: IsoDateString;
+  updatedAt: IsoDateString;
+}
+
+export interface UserListQuery {
+  search?: string;
+  role?: Role;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface UserListResponse {
+  items: ManagedUser[];
+  total: number;
+  page: number;
+  pageSize: number;
+  /** Jumlah per role untuk pencarian yang sama (tanpa filter role). */
+  counts: Record<Role | 'ALL', number>;
+}
+
+/**
+ * SUPER_ADMIN / CLUB_ADMIN: username atau email + password (min. 12). CLUB_ADMIN wajib clubId.
+ * PLAYER: phone wajib (login OTP), tanpa password.
+ */
+export interface CreateUserInput {
+  role: Role;
+  name?: string | null;
+  username?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  password?: string;
+  clubId?: string | null;
+  isActive?: boolean;
+}
+
+/** Field yang tidak dikirim tidak berubah; null mengosongkan field. */
+export type UpdateUserInput = Partial<CreateUserInput>;

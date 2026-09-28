@@ -46,7 +46,6 @@ SUPER_ADMIN (pemilik platform), CLUB_ADMIN (pengelola klub), PLAYER (pemain).
   Detail & cara update: infra/deploy/README.md.
 
 ## Backlog
-- Endpoint kelola user (buat/ubah/nonaktifkan CLUB_ADMIN, reset password).
 - Refresh token (sekarang hanya access token 7 hari).
 - Pembersihan berkala tabel OtpCode (kode kedaluwarsa/terpakai).
 - Ganti password akun seed (admin@padel.local, klub@padel.local) sebelum go-live.

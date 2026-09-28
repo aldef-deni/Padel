@@ -90,6 +90,22 @@ Setelah ganti password, semua token lama ditolak (401) dan respons berisi token 
 
 Coba di Swagger: login di `/docs`, salin `accessToken`, klik **Authorize**.
 
+## Pengguna (SUPER_ADMIN)
+
+| Endpoint | Keterangan |
+|---|---|
+| `GET /api/users?search=&role=&page=&pageSize=` | Daftar + `counts` per role (pencarian: nama, username, email, telepon) |
+| `GET /api/users/:id` | Detail |
+| `POST /api/users` | Buat pengguna |
+| `PATCH /api/users/:id` | Ubah; field `null` = dikosongkan, `password` = reset (token lama dicabut) |
+| `DELETE /api/users/:id` | Hapus (204) |
+
+Aturan role: SUPER_ADMIN/CLUB_ADMIN wajib username atau email + password (min. 12), CLUB_ADMIN wajib `clubId`;
+PLAYER wajib nomor HP (login OTP) dan tanpa password. `isActive: false` menolak login dan langsung
+mencabut token yang ada. Pengaman: tidak bisa mengubah role/menonaktifkan/menghapus akun sendiri, tidak
+bisa menghilangkan super admin aktif terakhir, dan pengguna yang punya klip tidak bisa dihapus (409,
+nonaktifkan saja). Username/email/telepon unik (409).
+
 ## Sesi & replay
 
 | Endpoint | Siapa | Keterangan |

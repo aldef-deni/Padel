@@ -25,9 +25,15 @@ export class TokenService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, role: true, clubId: true, passwordChangedAt: true },
+      select: {
+        id: true,
+        role: true,
+        clubId: true,
+        passwordChangedAt: true,
+        isActive: true,
+      },
     });
-    if (!user) return null;
+    if (!user?.isActive) return null;
     // Tokens issued before the last password change are revoked.
     if (payload.pwd !== user.passwordChangedAt?.getTime()) return null;
 

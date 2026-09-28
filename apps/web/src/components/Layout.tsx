@@ -1,5 +1,5 @@
 import type { Club } from '@padel/shared'
-import { Camera, ChevronsUpDown, LayoutDashboard, LogOut, Menu, RectangleHorizontal, Tv, X } from 'lucide-react'
+import { Camera, ChevronsUpDown, LayoutDashboard, LogOut, Menu, RectangleHorizontal, Tv, Users, X } from 'lucide-react'
 import { useEffect, useState, type ComponentType } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation } from 'react-router'
@@ -9,11 +9,18 @@ import { useActiveClub } from '../lib/club-context'
 import { BrandMark } from './brand'
 import { EmptyState, Loading } from './ui'
 
-const NAV: { to: string; key: string; icon: ComponentType<{ className?: string }>; end?: boolean }[] = [
+const NAV: {
+  to: string
+  key: string
+  icon: ComponentType<{ className?: string }>
+  end?: boolean
+  superAdminOnly?: boolean
+}[] = [
   { to: '/', key: 'nav.dashboard', icon: LayoutDashboard, end: true },
   { to: '/courts', key: 'nav.courts', icon: RectangleHorizontal },
   { to: '/cameras', key: 'nav.cameras', icon: Camera },
   { to: '/tv-setup', key: 'nav.tv', icon: Tv },
+  { to: '/users', key: 'nav.users', icon: Users, superAdminOnly: true },
 ]
 
 /** App shell: dark sidebar on desktop, slide-over drawer on mobile. */
@@ -107,7 +114,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
       </div>
 
       <nav className="relative mt-6 flex-1 space-y-1 px-4">
-        {NAV.map(({ to, key, icon: Icon, end }) => (
+        {NAV.filter((item) => !item.superAdminOnly || user?.role === 'SUPER_ADMIN').map(({ to, key, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}

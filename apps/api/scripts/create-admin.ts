@@ -65,6 +65,7 @@ try {
     // Changing the password revokes every token issued before (see JwtAuthGuard).
     passwordChangedAt: new Date(),
     role,
+    isActive: true,
     clubId: role === Role.CLUB_ADMIN ? values.club! : null,
   };
   const user = existing

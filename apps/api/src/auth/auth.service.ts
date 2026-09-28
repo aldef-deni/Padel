@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Inject,
@@ -68,7 +69,9 @@ export class AuthService implements OnModuleInit {
     ) {
       throw new UnauthorizedException('Invalid login or password');
     }
-    return this.issueToken(user);
+    // Only revealed after a correct password.
+    if (!user.isActive) throw new ForbiddenException('Account is disabled');
+    return this.issueToken(await this.touchLogin(user.id));
   }
 
   async requestOtp(rawPhone: string): Promise<OtpRequestedEntity> {
@@ -139,7 +142,8 @@ export class AuthService implements OnModuleInit {
     if (user.role !== Role.PLAYER) {
       throw new UnauthorizedException('Admin accounts must use password login');
     }
-    return this.issueToken(user);
+    if (!user.isActive) throw new ForbiddenException('Account is disabled');
+    return this.issueToken(await this.touchLogin(user.id));
   }
 
   /** Changes an admin's password and returns a fresh token; older tokens stop working. */
@@ -175,6 +179,13 @@ export class AuthService implements OnModuleInit {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException();
     return toUserEntity(user);
+  }
+
+  private touchLogin(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { lastLoginAt: new Date() },
+    });
   }
 
   private async issueToken(user: User): Promise<AuthResponseEntity> {

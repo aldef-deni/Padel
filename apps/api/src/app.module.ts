@@ -12,6 +12,7 @@ import { HealthController } from './health/health.controller.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { SessionsModule } from './sessions/sessions.module.js';
 import { TvModule } from './tv/tv.module.js';
+import { UsersModule } from './users/users.module.js';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { TvModule } from './tv/tv.module.js';
     CamerasModule,
     SessionsModule,
     TvModule,
+    UsersModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: HttpThrottlerGuard }],
