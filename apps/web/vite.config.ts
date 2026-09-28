@@ -21,6 +21,8 @@ function mediaProxy(prefix: string, target: string): ProxyOptions {
 
 const proxy: Record<string, string | ProxyOptions> = {
   '/api': 'http://127.0.0.1:3000',
+  // Socket.IO (notifikasi klip) ke API.
+  '/socket.io': { target: 'http://127.0.0.1:3000', ws: true },
   '/media/hls': mediaProxy('/media/hls', 'http://127.0.0.1:8888'),
   '/media/webrtc': mediaProxy('/media/webrtc', 'http://127.0.0.1:8889'),
 }

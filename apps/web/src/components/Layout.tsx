@@ -34,6 +34,9 @@ export function Layout() {
             <NavLink to="/cameras" className={navClass}>
               {t('nav.cameras')}
             </NavLink>
+            <NavLink to="/tv-setup" className={navClass}>
+              {t('nav.tv')}
+            </NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm">
             {user?.role === 'SUPER_ADMIN' && clubs.length > 0 ? (

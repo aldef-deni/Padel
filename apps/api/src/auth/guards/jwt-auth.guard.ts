@@ -5,25 +5,24 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
-import { PrismaService } from '../../prisma/prisma.service.js';
-import type { AuthUser, JwtPayload } from '../auth-user.js';
+import type { AuthUser } from '../auth-user.js';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
+import { TokenService } from '../token.service.js';
 
 /**
- * Global guard: every route needs a valid Bearer token unless marked @Public().
- * The user is re-read from the DB so role/club changes and deletions apply immediately.
+ * Global guard: every HTTP route needs a valid Bearer token unless marked @Public().
+ * Socket.IO connections authenticate in the gateway instead.
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly jwt: JwtService,
-    private readonly prisma: PrismaService,
+    private readonly tokens: TokenService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    if (context.getType() !== 'http') return true;
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -36,23 +35,9 @@ export class JwtAuthGuard implements CanActivate {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     if (type !== 'Bearer' || !token) throw new UnauthorizedException();
 
-    let payload: JwtPayload;
-    try {
-      payload = await this.jwt.verifyAsync<JwtPayload>(token);
-    } catch {
-      throw new UnauthorizedException();
-    }
-
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, role: true, clubId: true, passwordChangedAt: true },
-    });
+    const user = await this.tokens.verify(token);
     if (!user) throw new UnauthorizedException();
-    // Tokens issued before the last password change are revoked.
-    if (payload.pwd !== user.passwordChangedAt?.getTime())
-      throw new UnauthorizedException();
-
-    request.user = { id: user.id, role: user.role, clubId: user.clubId };
+    request.user = user;
     return true;
   }
 }

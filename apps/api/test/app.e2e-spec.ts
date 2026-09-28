@@ -13,7 +13,7 @@ import { PrismaService } from '../src/prisma/prisma.service.js';
 describe('API (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
-  const run = Date.now().toString(36);
+  const run = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const password = 'rahasia-e2e-123';
   const superEmail = `super-${run}@e2e.test`;
   const clubAdminEmail = `klub-${run}@e2e.test`;

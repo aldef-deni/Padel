@@ -28,6 +28,10 @@ model Club {
   slug      String   @unique
   address   String?
   timezone  String   @default("Asia/Jakarta")
+  // Nama file logo di LOGOS_DIR (berubah setiap upload, sekalian cache-buster).
+  logoFile  String?
+  // Kunci rahasia link layar TV (/tv/<clubId>?key=...); diganti = link lama mati.
+  tvKey     String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

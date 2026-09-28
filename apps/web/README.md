@@ -23,6 +23,9 @@ Login dengan akun admin (SUPER_ADMIN atau CLUB_ADMIN). Akun pemain ditolak.
 | `/courts` | Tambah, ubah nama, hapus lapangan |
 | `/cameras` | Tambah, ubah, aktif/nonaktifkan, hapus kamera + status live |
 | `/courts/:id` | Live stream tiap kamera + URL publish kamera |
+| `/tv-setup` | Layar TV: unggah logo klub, buat/ganti link TV |
+| `/tv/:clubId?key=` | **Kiosk TV** (tanpa login): layar idle dengan logo & jam; klip READY diputar otomatis layar penuh (antrean), chip "menyiapkan replay", kembali ke idle setelah selesai |
+| `/courts/:id/session` | Sesi & Replay: mulai/akhiri sesi, QR join, simulasi tombol REPLAY, daftar klip (update realtime via Socket.IO, putar & unduh) |
 
 SUPER_ADMIN bisa memilih klub di header; CLUB_ADMIN otomatis ke klubnya.
 
@@ -31,6 +34,7 @@ SUPER_ADMIN bisa memilih klub di header; CLUB_ADMIN otomatis ke klubnya.
 | Path di browser | Diteruskan ke |
 |---|---|
 | `/api` | API NestJS `127.0.0.1:3000` |
+| `/socket.io` | Socket.IO API (WebSocket) |
 | `/media/webrtc` | MediaMTX WebRTC/WHEP `127.0.0.1:8889` |
 | `/media/hls` | MediaMTX HLS `127.0.0.1:8888` (hanya localhost) |
 
@@ -44,3 +48,11 @@ WebRTC (WHEP, latensi rendah) lebih dulu; kalau tidak tersambung dalam 10 detik,
 HLS. Bisa juga dipilih manual (tombol WebRTC/HLS). hls.js hanya dimuat saat HLS dipakai.
 
 Catatan: WebRTC tidak mendukung audio AAC, jadi audio kamera (umumnya AAC) hanya terdengar di HLS.
+
+## Layar TV
+
+Buka link dari menu **Layar TV** di browser TV, idealnya mode kiosk, mis.
+`chromium --kiosk --autoplay-policy=no-user-gesture-required "<link TV>"`.
+Video diputar tanpa suara (syarat autoplay browser). Halaman meminta Wake Lock agar layar tidak tidur
+(hanya di konteks aman: https atau localhost). Jika admin membuat link baru, TV lama langsung
+menampilkan "link tidak valid".

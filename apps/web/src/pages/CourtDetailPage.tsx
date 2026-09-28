@@ -34,12 +34,20 @@ export function CourtDetailPage() {
       <PageHeader
         title={court.data.name}
         actions={
-          <Link
-            to={`/cameras?courtId=${court.data.id}`}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            {t('court.manageCameras')}
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              to={`/courts/${court.data.id}/session`}
+              className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            >
+              {t('court.session')}
+            </Link>
+            <Link
+              to={`/cameras?courtId=${court.data.id}`}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              {t('court.manageCameras')}
+            </Link>
+          </div>
         }
       />
 

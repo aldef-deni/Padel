@@ -7,6 +7,7 @@ import { AuthService } from './auth.service.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 import { RolesGuard } from './guards/roles.guard.js';
 import { LogOtpSender, OTP_SENDER } from './otp/otp-sender.js';
+import { TokenService } from './token.service.js';
 
 @Module({
   imports: [
@@ -28,10 +29,12 @@ import { LogOtpSender, OTP_SENDER } from './otp/otp-sender.js';
   controllers: [AuthController],
   providers: [
     AuthService,
+    TokenService,
     { provide: OTP_SENDER, useClass: LogOtpSender },
     // Order matters: authenticate first, then check roles.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
+  exports: [TokenService],
 })
 export class AuthModule {}

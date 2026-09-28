@@ -33,9 +33,13 @@ pnpm start:dev
 |---|---|---|
 | Health | `GET /api/health` | cek koneksi DB, publik |
 | Auth | `/api/auth/...` | lihat di bawah |
-| Club | `/api/clubs`, `/api/clubs/:id` | `slug` unik |
+| Club | `/api/clubs`, `/api/clubs/:id` | `slug` unik, respons berisi `logoUrl` |
+| Logo klub | `POST/DELETE /api/clubs/:id/logo` (admin), `GET /api/clubs/:id/logo` (publik) | multipart `file`: PNG/JPEG/WebP ≤ 1 MB (dicek dari isi file; SVG ditolak), disimpan di `LOGOS_DIR` |
+| Layar TV | lihat di bawah | |
 | Court | `/api/courts?clubId=`, `/api/courts/:id` | `name` unik per klub |
-| Camera | `/api/cameras?courtId=`, `/api/cameras/:id` | `streamPath` unik, pola `court-<id>` |
+| Camera | `/api/cameras?courtId=&clubId=`, `/api/cameras/:id` | `streamPath` unik, pola `court-<id>` |
+| Status kamera | `GET /api/cameras/status?clubId=` | online/offline dari API MediaMTX |
+| Sesi & replay | lihat di bawah | |
 
 Club/Court/Camera hanya untuk admin (lihat Autentikasi). Semua resource: `POST`, `GET`, `GET :id`, `PATCH :id`, `DELETE :id` (204).
 Error: 400 validasi / relasi tidak ada, 404 tidak ditemukan, 409 duplikat atau masih dipakai
@@ -75,3 +79,42 @@ jadi mengubah `.env` tidak mengganti password akun yang sudah ada; pakai `PATCH 
 Setelah ganti password, semua token lama ditolak (401) dan respons berisi token baru.
 
 Coba di Swagger: login di `/docs`, salin `accessToken`, klik **Authorize**.
+
+## Sesi & replay
+
+| Endpoint | Siapa | Keterangan |
+|---|---|---|
+| `POST /api/courts/:courtId/sessions` | admin | Mulai sesi (maks. 1 aktif per lapangan, 409 jika sudah ada) |
+| `GET /api/courts/:courtId/sessions/active` | admin | `{ session: Session \| null }` |
+| `GET /api/sessions/:id/qr` | admin | `{ qrToken, joinUrl, svg }`; `joinUrl = APP_PUBLIC_URL/join/<qrToken>` |
+| `POST /api/sessions/:id/end` | admin | Akhiri sesi |
+| `POST /api/sessions/join` | PLAYER | `{ qrToken }` → 404 token salah, 410 sesi berakhir |
+| `GET /api/sessions/:id` | admin klub / pemain yang join | Detail sesi |
+| `POST /api/sessions/:id/replays` | admin klub / pemain yang join | `{ durationSec? }` (5–120, default 30) → 202, 1 klip PENDING per kamera aktif |
+| `GET /api/sessions/:id/clips` | admin klub / pemain yang join | Daftar klip + `downloadUrl` untuk yang READY |
+| `GET /api/clips/:id/file?exp=&sig=` | publik, URL bertanda tangan | Video MP4 (Range didukung), berlaku 1 jam |
+
+**Alur klip:** tombol replay membuat `Clip` PENDING (rentang `now - durationSec` s.d. `now`) dan job BullMQ
+`clips` (delay 2 detik agar rekaman sudah ter-flush). Worker (di proses API, concurrency 2) mengambil
+`MEDIAMTX_PLAYBACK_URL/get?path=&start=&duration=&format=mp4`, menyimpan ke `CLIPS_DIR/<clipId>.mp4`,
+lalu READY. Gagal jaringan/5xx dicoba ulang 3x (backoff); 4xx (tidak ada rekaman, kamera offline)
+langsung FAILED dengan pesan error.
+
+**Socket.IO** (`/socket.io`): connect dengan `auth: { token: <JWT> }`, lalu
+`emit('session:subscribe', { sessionId }, ack)`. Server mengirim `clip:updated` (objek `Clip`)
+setiap klip dibuat atau berubah status. Nama event & tipe ada di `@padel/shared`.
+
+**Test e2e** `test/replay.e2e-spec.ts` mem-publish stream uji sendiri dengan ffmpeg (kredensial dari
+`infra/.env`) dan memakai prefix antrean `padel-e2e`, jadi aman dijalankan walau server dev menyala.
+
+## Layar TV (kiosk)
+
+| Endpoint | Siapa | Keterangan |
+|---|---|---|
+| `GET /api/clubs/:id/tv-link` | admin klub | `{ url }` atau `{ url: null }` |
+| `POST /api/clubs/:id/tv-link` | admin klub | Buat kunci baru → `{ url }`; kunci lama langsung tidak berlaku dan TV yang terhubung diputus |
+| `GET /api/tv/:clubId?key=` | publik + kunci | Data awal layar TV: klub (nama, logo), lapangan, kamera, 10 klip READY terbaru |
+
+Link TV: `APP_PUBLIC_URL/tv/<clubId>?key=<kunci>` (kunci acak 24 byte, disimpan di `Club.tvKey`).
+TV connect Socket.IO dengan `auth: { clubId, tvKey }`, otomatis masuk room klub dan menerima
+`clip:updated` dari semua lapangan klub itu (TV tidak bisa subscribe ke sesi).

@@ -47,4 +47,9 @@ SUPER_ADMIN (pemilik platform), CLUB_ADMIN (pengelola klub), PLAYER (pemain).
 - Ganti password akun seed (admin@padel.local, klub@padel.local) sebelum go-live.
 - Reverse proxy produksi (nginx) untuk web + `/api` + `/media/webrtc` + `/media/hls`,
   meniru proxy di apps/web/vite.config.ts (termasuk rewrite header Location).
+- Klip: pindah penyimpanan ke R2 (ganti ClipStorage), retensi/hapus file lama di /opt/padel/data/clips.
+- Halaman/deep link `APP_PUBLIC_URL/join/<qrToken>` belum ada (untuk aplikasi pemain).
+- Socket.IO Redis adapter jika API dijalankan lebih dari 1 instance.
+- Logo klub: pindah ke R2 seperti klip.
+- Worker klip masih di proses API; pindahkan ke apps/media jika perlu (antrean BullMQ `clips` sudah terpisah).
 - Audio di WebRTC: kamera kirim AAC (tidak didukung WebRTC); perlu transcode ke Opus jika audio live dibutuhkan.
