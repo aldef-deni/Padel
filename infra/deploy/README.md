@@ -13,7 +13,8 @@ Satu VM: nginx (TLS Let's Encrypt) di depan web statis, API NestJS (systemd) dan
 
 Alur request: `https://padel.aldeftech.com` → nginx →
 `/` web statis (SPA), `/api` + `/docs` + `/socket.io` → API `127.0.0.1:3000`,
-`/media/hls` → MediaMTX `127.0.0.1:8888`, `/media/webrtc` → `127.0.0.1:8889`.
+`/media/hls` → MediaMTX `127.0.0.1:8888`, `/media/webrtc` → `127.0.0.1:8889`,
+`/downloads/` → file di `/opt/padel/data/downloads/` (APK aplikasi pemain untuk testing).
 Media WebRTC (UDP 8189), RTMP 1935 dan SRT 8890 tetap langsung ke IP server.
 
 ## Update aplikasi
