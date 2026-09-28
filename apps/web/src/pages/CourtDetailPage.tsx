@@ -1,11 +1,13 @@
-import type { CameraStatus } from '@padel/shared'
+import type { Camera, CameraStatus } from '@padel/shared'
+import { Radio } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { LivePlayer } from '../components/LivePlayer'
+import { PublishCameraDialog } from '../components/PublishCameraDialog'
 import { StatusBadge } from '../components/StatusBadge'
 import { cameraState, videoLabel } from '../lib/camera-state'
-import { Card, EmptyState, ErrorText, Loading, PageHeader } from '../components/ui'
-import { publishUrls } from '../media/urls'
+import { EmptyState, ErrorText, Loading, PageHeader } from '../components/ui'
 import { errorMessage } from '../lib/errors'
 import { useCameras, useCameraStatus, useCourt } from '../lib/queries'
 import { useClub } from '../lib/use-club'
@@ -17,6 +19,7 @@ export function CourtDetailPage() {
   const court = useCourt(courtId)
   const cameras = useCameras(club.id)
   const status = useCameraStatus(club.id)
+  const [publishing, setPublishing] = useState<Camera | null>(null)
 
   // Wait for the first status so players don't try to connect to offline cameras.
   if (court.isPending || cameras.isPending || status.isPending) return <Loading label={t('common.loading')} />
@@ -59,7 +62,6 @@ export function CourtDetailPage() {
             const s = statusById.get(camera.id)
             const state = cameraState(camera.isActive, s, reachable)
             const label = videoLabel(s)
-            const urls = publishUrls(camera.streamPath)
             return (
               <section key={camera.id} className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -68,6 +70,14 @@ export function CourtDetailPage() {
                     {label && <span>{label}</span>}
                     {s?.online && <span>{t('status.viewers', { count: s.readers })}</span>}
                     <StatusBadge state={state} />
+                    <button
+                      type="button"
+                      onClick={() => setPublishing(camera)}
+                      className="ml-1 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      <Radio className="h-3.5 w-3.5" />
+                      {t('cameras.publishButton')}
+                    </button>
                   </div>
                 </div>
                 <LivePlayer
@@ -75,16 +85,14 @@ export function CourtDetailPage() {
                   active={camera.isActive}
                   online={state === 'unknown' ? undefined : state === 'online'}
                 />
-                <Card className="p-3 text-xs">
-                  <p className="mb-1 font-medium text-slate-700">{t('cameras.publishUrl')}</p>
-                  <p className="break-all font-mono text-slate-600">{urls.rtmp}</p>
-                  <p className="break-all font-mono text-slate-600">{urls.srt}</p>
-                  <p className="mt-2 text-slate-500">{t('cameras.publishHint')}</p>
-                </Card>
               </section>
             )
           })}
         </div>
+      )}
+
+      {publishing && (
+        <PublishCameraDialog camera={publishing} courtName={court.data.name} onClose={() => setPublishing(null)} />
       )}
     </>
   )
