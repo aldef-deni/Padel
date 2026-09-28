@@ -7,7 +7,8 @@ import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { hashPassword } from '../src/auth/password.js';
 import { DEMO_USERNAME } from '../src/demo/demo.service.js';
-import { Role } from '../src/generated/prisma/client.js';
+import { OtpChannel, Role } from '../src/generated/prisma/client.js';
+import { MAILER } from '../src/mail/mailer.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
 // Demo instance (DEMO_MODE=true): the shared "demo" account is advertised and protected.
@@ -19,6 +20,7 @@ describe('Demo mode (e2e)', () => {
   let demoToken: string;
   let superToken: string;
   const previous = process.env.DEMO_MODE;
+  const playerEmail = `demo-player-${run}@e2e.test`;
 
   const server = () => app.getHttpServer();
   const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
@@ -27,7 +29,10 @@ describe('Demo mode (e2e)', () => {
     process.env.DEMO_MODE = 'true';
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(MAILER)
+      .useValue({ kind: 'log', send: async () => {} })
+      .compile();
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
@@ -52,7 +57,12 @@ describe('Demo mode (e2e)', () => {
 
   afterAll(async () => {
     await prisma.user.deleteMany({
-      where: { OR: [{ id: demoId }, { username: `e2e-demo-sa-${run}` }] },
+      where: {
+        OR: [{ id: demoId }, { username: `e2e-demo-sa-${run}` }, { email: playerEmail }],
+      },
+    });
+    await prisma.otpCode.deleteMany({
+      where: { channel: OtpChannel.EMAIL, target: playerEmail },
     });
     await app.close();
     if (previous === undefined) delete process.env.DEMO_MODE;
@@ -66,6 +76,19 @@ describe('Demo mode (e2e)', () => {
     expect(resetIn).toBeGreaterThan(0);
     expect(resetIn).toBeLessThanOrEqual(24 * 3600_000);
     expect(new Date(res.body.demo.resetAt).getUTCHours()).toBe(17); // 00:00 WIB
+  });
+
+  it('returns the player sign-in code (no SMTP on the demo instance)', async () => {
+    const requested = await request(server())
+      .post('/api/auth/email/request')
+      .send({ email: playerEmail })
+      .expect(202);
+    expect(requested.body.demoCode).toMatch(/^\d{6}$/);
+    const login = await request(server())
+      .post('/api/auth/email/verify')
+      .send({ email: playerEmail, code: requested.body.demoCode })
+      .expect(200);
+    expect(login.body.user).toMatchObject({ email: playerEmail, role: 'PLAYER' });
   });
 
   it('protects the demo account from lock-out changes', async () => {

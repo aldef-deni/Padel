@@ -92,6 +92,8 @@ export interface EmailCodeRequested {
   email: string;
   expiresInSec: number;
   resendInSec: number;
+  /** Hanya di instance demo (tanpa SMTP): kode ikut dikembalikan agar bisa dicoba. */
+  demoCode?: string;
 }
 
 /** PATCH /api/auth/me — profil sendiri. Pemain tidak bisa mengganti nomor/email login di sini. */
@@ -213,6 +215,15 @@ export interface JoinSessionResponse {
   session: Session;
   court: { id: string; name: string };
   club: { id: string; name: string };
+}
+
+/** GET /api/me/sessions — riwayat sesi pemain (terbaru dulu). */
+export interface MySession {
+  session: Session;
+  court: { id: string; name: string };
+  club: { id: string; name: string; logoUrl: string | null };
+  clips: { total: number; ready: number };
+  lastClipAt: IsoDateString | null;
 }
 
 export interface RequestReplayInput {

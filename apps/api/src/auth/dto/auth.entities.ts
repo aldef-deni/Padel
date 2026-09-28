@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '../../generated/prisma/client.js';
 
 export class UserEntity {
@@ -25,6 +25,10 @@ export class OtpRequestedEntity {
   @ApiProperty({ example: '+6281234567890' }) phone: string;
   @ApiProperty({ example: 300 }) expiresInSec: number;
   @ApiProperty({ example: 60 }) resendInSec: number;
+  @ApiPropertyOptional({
+    description: 'Hanya di instance demo (tanpa SMTP): kode masuk',
+  })
+  demoCode?: string;
 }
 
 export class EmailCodeRequestedEntity {

@@ -100,6 +100,17 @@ export class SessionsController {
     return this.sessions.requestReplay(user, id, dto.durationSec);
   }
 
+  /** Player app history: sessions I joined, newest first. */
+  @Get('me/sessions')
+  @Roles(Role.PLAYER)
+  @ApiOkResponse({
+    description:
+      '[{ session, court, club (logoUrl), clips: { total, ready }, lastClipAt }]',
+  })
+  mySessions(@CurrentUser() user: AuthUser) {
+    return this.sessions.mySessions(user);
+  }
+
   @Get('sessions/:id/clips')
   @ApiOkResponse({ type: [ClipEntity] })
   clips(@CurrentUser() user: AuthUser, @Param('id') id: string) {

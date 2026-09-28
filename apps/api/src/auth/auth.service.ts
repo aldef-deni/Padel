@@ -139,6 +139,8 @@ export class AuthService implements OnModuleInit {
       email,
       expiresInSec: EMAIL_CODE_TTL_SEC,
       resendInSec: OTP_RESEND_SEC,
+      // Demo instance has no SMTP and throwaway data: hand the code back so it can be tried.
+      ...(this.demo.enabled ? { demoCode: code } : {}),
     };
   }
 

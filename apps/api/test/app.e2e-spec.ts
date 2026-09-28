@@ -250,6 +250,7 @@ describe('API (e2e)', () => {
         expiresInSec: 600,
         resendInSec: 60,
       });
+      expect(requested.body.demoCode).toBeUndefined(); // only on the demo instance
 
       // Resend cooldown.
       await request(server())

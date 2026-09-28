@@ -11,7 +11,9 @@ import QRCode from 'qrcode';
 import { assertClubAccess, type AuthUser } from '../auth/auth-user.js';
 import { ClipsService } from '../clips/clips.service.js';
 import { ClipEntity } from '../clips/entities/clip.entity.js';
-import { Role } from '../generated/prisma/client.js';
+import type { MySession } from '@padel/shared';
+import { clubLogoUrl } from '../clubs/entities/club.entity.js';
+import { ClipStatus, Role } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SessionAccessService } from './session-access.service.js';
 import {
@@ -175,6 +177,56 @@ export class SessionsService {
       }
     }
     return this.clips.createReplay(session, user.id, durationSec);
+  }
+
+  /** Player history: sessions the user joined, newest first, with clip counts. */
+  async mySessions(user: AuthUser, limit = 50): Promise<MySession[]> {
+    const joined = await this.prisma.sessionPlayer.findMany({
+      where: { userId: user.id },
+      orderBy: { session: { startedAt: 'desc' } },
+      take: limit,
+      select: {
+        session: {
+          include: {
+            ...withPlayerCount,
+            court: {
+              select: {
+                id: true,
+                name: true,
+                club: { select: { id: true, name: true, logoFile: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    const ids = joined.map((j) => j.session.id);
+    const counts = await this.prisma.clip.groupBy({
+      by: ['sessionId', 'status'],
+      where: { sessionId: { in: ids } },
+      _count: { _all: true },
+      _max: { createdAt: true },
+    });
+    return joined.map(({ session }) => {
+      const mine = counts.filter((c) => c.sessionId === session.id);
+      const last = mine
+        .map((c) => c._max.createdAt)
+        .filter((d): d is Date => d !== null)
+        .sort((a, b) => b.getTime() - a.getTime())[0];
+      const { club, ...court } = session.court;
+      return {
+        session: toSessionEntity(session),
+        court,
+        club: { id: club.id, name: club.name, logoUrl: clubLogoUrl(club) },
+        clips: {
+          total: mine.reduce((sum, c) => sum + c._count._all, 0),
+          ready: mine
+            .filter((c) => c.status === ClipStatus.READY)
+            .reduce((sum, c) => sum + c._count._all, 0),
+        },
+        lastClipAt: last?.toISOString() ?? null,
+      };
+    });
   }
 
   async listClips(user: AuthUser, sessionId: string): Promise<ClipEntity[]> {

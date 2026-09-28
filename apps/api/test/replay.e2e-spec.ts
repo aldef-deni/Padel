@@ -370,6 +370,22 @@ describe('Sessions & replay (e2e)', () => {
   }, 30_000);
 
   it('replay library: sizes, stats, filters, club scope, delete; recording status', async () => {
+    // Player app history: the session joined in the first test, with its clip counts.
+    const mine = await request(server())
+      .get('/api/me/sessions')
+      .set(auth(playerToken))
+      .expect(200);
+    expect(mine.body).toEqual([
+      expect.objectContaining({
+        court: { id: courtId, name: 'Lapangan Replay' },
+        club: { id: clubId, name: 'E2E Replay', logoUrl: null },
+        clips: { total: 1, ready: 1 },
+        lastClipAt: expect.any(String),
+      }),
+    ]);
+    expect(mine.body[0].session.endedAt).toEqual(expect.any(String));
+    await request(server()).get('/api/me/sessions').set(auth(adminToken)).expect(403);
+
     const lib = await request(server())
       .get(`/api/clips?clubId=${clubId}`)
       .set(auth(adminToken))
