@@ -33,7 +33,8 @@ pnpm start:dev
 |---|---|---|
 | Health | `GET /api/health` | cek koneksi DB, publik |
 | Auth | `/api/auth/...` | lihat di bawah |
-| Club | `/api/clubs`, `/api/clubs/:id` | `slug` unik, respons berisi `logoUrl` |
+| Club | `/api/clubs`, `/api/clubs/:id` | `slug` unik; profil: kota, deskripsi, telepon, email, website, Instagram, link Maps, jam buka/tutup, zona waktu, `isActive`, `logoUrl` |
+| Daftar klub + statistik | `GET /api/clubs/stats?search=&status=ACTIVE\|INACTIVE&page=&pageSize=` | SUPER_ADMIN: lapangan, kamera, admin, sesi aktif, replay 30 hari per klub |
 | Logo klub | `POST/DELETE /api/clubs/:id/logo` (admin), `GET /api/clubs/:id/logo` (publik) | multipart `file`: PNG/JPEG/WebP ≤ 1 MB (dicek dari isi file; SVG ditolak), disimpan di `LOGOS_DIR` |
 | Layar TV | lihat di bawah | |
 | Court | `/api/courts?clubId=`, `/api/courts/:id` | `name` unik per klub |
@@ -72,6 +73,10 @@ Pengiriman WhatsApp nanti cukup mengganti provider `OTP_SENDER` di `auth.module.
 
 Akses di luar hak → 403, tanpa/token salah → 401. Rate limit per IP: 120 req/menit umum,
 lebih ketat di login/OTP (429 jika terlampaui).
+
+**Klub nonaktif** (`isActive: false`, hanya SUPER_ADMIN yang bisa mengubah): admin klubnya tidak bisa login
+(403 "Club is disabled") dan tokennya ditolak; mulai sesi, join, dan replay ditolak (403); link TV berhenti.
+Klub hanya bisa dihapus jika tidak punya lapangan dan admin (409 jika masih ada).
 
 **Membuat/memperbarui akun admin** (belum ada endpoint kelola user):
 

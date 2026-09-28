@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   GoneException,
   Injectable,
   NotFoundException,
@@ -39,7 +40,8 @@ export class SessionsService {
 
   /** Starts a session on a court; a court has at most one active session. */
   async start(user: AuthUser, courtId: string): Promise<SessionEntity> {
-    await this.assertCourtAccess(user, courtId);
+    const court = await this.assertCourtAccess(user, courtId);
+    if (!court.club.isActive) throw new ForbiddenException('Club is disabled');
     const session = await this.prisma.$transaction(async (tx) => {
       // Serialize concurrent starts on the same court.
       await tx.$queryRaw`SELECT id FROM "Court" WHERE id = ${courtId} FOR UPDATE`;
@@ -106,13 +108,15 @@ export class SessionsService {
           select: {
             id: true,
             name: true,
-            club: { select: { id: true, name: true } },
+            club: { select: { id: true, name: true, isActive: true } },
           },
         },
       },
     });
     if (!session) throw new NotFoundException('Session not found');
     if (session.endedAt) throw new GoneException('Session has ended');
+    if (!session.court.club.isActive)
+      throw new ForbiddenException('Club is disabled');
 
     await this.prisma.sessionPlayer.upsert({
       where: { sessionId_userId: { sessionId: session.id, userId: user.id } },
@@ -128,7 +132,7 @@ export class SessionsService {
         _count: { players: playerCount },
       }),
       court: { id: session.court.id, name: session.court.name },
-      club: session.court.club,
+      club: { id: session.court.club.id, name: session.court.club.name },
     };
   }
 
@@ -140,6 +144,8 @@ export class SessionsService {
   ): Promise<ClipEntity[]> {
     const session = await this.access.get(user, sessionId);
     if (session.endedAt) throw new ConflictException('Session has ended');
+    if (!session.court.club.isActive)
+      throw new ForbiddenException('Club is disabled');
     return this.clips.createReplay(session, user.id, durationSec);
   }
 
@@ -151,9 +157,10 @@ export class SessionsService {
   private async assertCourtAccess(user: AuthUser, courtId: string) {
     const court = await this.prisma.court.findUnique({
       where: { id: courtId },
-      select: { clubId: true },
+      select: { clubId: true, club: { select: { isActive: true } } },
     });
     if (!court) throw new NotFoundException(`Court ${courtId} not found`);
     assertClubAccess(user, court.clubId);
+    return court;
   }
 }

@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Res,
   UploadedFile,
   UseInterceptors,
@@ -35,10 +36,10 @@ import { Public } from '../auth/decorators/public.decorator.js';
 import { ADMIN_ROLES, Roles } from '../auth/decorators/roles.decorator.js';
 import { Role } from '../generated/prisma/client.js';
 import { ClubsService } from './clubs.service.js';
-import { CreateClubDto } from './dto/create-club.dto.js';
+import { CreateClubDto, ListClubsQuery } from './dto/create-club.dto.js';
 import { UpdateClubDto } from './dto/update-club.dto.js';
 import { ClubOverviewEntity } from './entities/club-overview.entity.js';
-import { ClubEntity } from './entities/club.entity.js';
+import { ClubEntity, ClubListResponseEntity } from './entities/club.entity.js';
 
 const MAX_LOGO_BYTES = 1024 * 1024;
 
@@ -63,6 +64,14 @@ export class ClubsController {
   @ApiConflictResponse({ description: 'Slug sudah dipakai' })
   create(@Body() dto: CreateClubDto) {
     return this.clubs.create(dto);
+  }
+
+  /** SUPER_ADMIN overview of all clubs (declared before ':id'). */
+  @Get('stats')
+  @Roles(Role.SUPER_ADMIN)
+  @ApiOkResponse({ type: ClubListResponseEntity })
+  listWithStats(@Query() query: ListClubsQuery) {
+    return this.clubs.listWithStats(query);
   }
 
   @Get()
@@ -95,7 +104,9 @@ export class ClubsController {
   @HttpCode(204)
   @ApiNoContentResponse()
   @ApiNotFoundResponse()
-  @ApiConflictResponse({ description: 'Klub masih punya lapangan' })
+  @ApiConflictResponse({
+    description: 'Klub masih punya lapangan atau admin (nonaktifkan saja)',
+  })
   remove(@Param('id') id: string) {
     return this.clubs.remove(id);
   }

@@ -23,17 +23,30 @@ enum ClipStatus {
 }
 
 model Club {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  address   String?
-  timezone  String   @default("Asia/Jakarta")
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  address     String?
+  timezone    String   @default("Asia/Jakarta")
+  // Profil & kontak klub (semua opsional).
+  city        String?
+  description String?
+  phone       String?
+  email       String?
+  website     String?
+  instagram   String?
+  mapsUrl     String?
+  // Jam operasional "HH:mm" (zona waktu klub).
+  openTime    String?
+  closeTime   String?
+  // false = klub dinonaktifkan: admin klub tidak bisa login, sesi/replay/TV berhenti.
+  isActive    Boolean  @default(true)
   // Nama file logo di LOGOS_DIR (berubah setiap upload, sekalian cache-buster).
-  logoFile  String?
+  logoFile    String?
   // Kunci rahasia link layar TV (/tv/<clubId>?key=...); diganti = link lama mati.
-  tvKey     String?  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  tvKey       String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   courts Court[]
   admins User[]

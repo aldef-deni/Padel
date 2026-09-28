@@ -158,6 +158,11 @@ export class ListUsersQuery {
   @IsIn(ROLES)
   role?: Role;
 
+  @ApiPropertyOptional({ description: 'Filter per klub' })
+  @IsOptional()
+  @IsString()
+  clubId?: string;
+
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Role } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AuthUser, JwtPayload } from './auth-user.js';
 
@@ -31,9 +32,13 @@ export class TokenService {
         clubId: true,
         passwordChangedAt: true,
         isActive: true,
+        club: { select: { isActive: true } },
       },
     });
     if (!user?.isActive) return null;
+    // A deactivated club locks out its club admins too.
+    if (user.role === Role.CLUB_ADMIN && user.club && !user.club.isActive)
+      return null;
     // Tokens issued before the last password change are revoked.
     if (payload.pwd !== user.passwordChangedAt?.getTime()) return null;
 

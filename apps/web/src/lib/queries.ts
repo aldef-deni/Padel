@@ -4,7 +4,11 @@ import type {
   CameraStatusResponse,
   Clip,
   Club,
+  ClubListQuery,
+  ClubListResponse,
   ClubOverview,
+  CreateClubInput,
+  UpdateClubInput,
   Court,
   CreateCameraInput,
   CreateCourtInput,
@@ -259,6 +263,7 @@ export function useUsers(query: UserListQuery) {
   const params = new URLSearchParams()
   if (query.search) params.set('search', query.search)
   if (query.role) params.set('role', query.role)
+  if (query.clubId) params.set('clubId', query.clubId)
   params.set('page', String(query.page ?? 1))
   params.set('pageSize', String(query.pageSize ?? 20))
   return useQuery({
@@ -294,6 +299,56 @@ export function useDeleteUser() {
   const invalidate = useInvalidateUsers()
   return useMutation({
     mutationFn: (id: string) => api<void>(`/users/${id}`, { method: 'DELETE' }),
+    onSuccess: invalidate,
+  })
+}
+
+// ---- Klub (SUPER_ADMIN) ----
+
+export function useClubsStats(query: ClubListQuery) {
+  const params = new URLSearchParams()
+  if (query.search) params.set('search', query.search)
+  if (query.status) params.set('status', query.status)
+  params.set('page', String(query.page ?? 1))
+  params.set('pageSize', String(query.pageSize ?? 12))
+  return useQuery({
+    queryKey: ['clubs', 'stats', query],
+    queryFn: () => api<ClubListResponse>(`/clubs/stats?${params}`),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useClubDetail(id: string) {
+  return useQuery({ queryKey: ['clubs', 'detail', id], queryFn: () => api<Club>(`/clubs/${id}`) })
+}
+
+/** Every club query starts with ['clubs'], so one invalidation refreshes lists, details and the switcher. */
+function useInvalidateClubs() {
+  const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries({ queryKey: ['clubs'] })
+}
+
+export function useCreateClub() {
+  const invalidate = useInvalidateClubs()
+  return useMutation({
+    mutationFn: (input: CreateClubInput) => api<Club>('/clubs', { method: 'POST', body: input }),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdateClub() {
+  const invalidate = useInvalidateClubs()
+  return useMutation({
+    mutationFn: ({ id, ...input }: UpdateClubInput & { id: string }) =>
+      api<Club>(`/clubs/${id}`, { method: 'PATCH', body: input }),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeleteClub() {
+  const invalidate = useInvalidateClubs()
+  return useMutation({
+    mutationFn: (id: string) => api<void>(`/clubs/${id}`, { method: 'DELETE' }),
     onSuccess: invalidate,
   })
 }

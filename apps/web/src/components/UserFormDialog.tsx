@@ -15,7 +15,16 @@ const ROLE_OPTIONS: { role: Role; icon: ComponentType<{ className?: string }> }[
 ]
 
 /** Create (user = null) or edit a user; fields follow the chosen role's rules. */
-export function UserFormDialog({ user, onClose }: { user: ManagedUser | null; onClose: () => void }) {
+export function UserFormDialog({
+  user,
+  onClose,
+  preset,
+}: {
+  user: ManagedUser | null
+  onClose: () => void
+  /** Defaults for a new user, e.g. a club admin for the club being viewed. */
+  preset?: { role: Role; clubId?: string }
+}) {
   const { t } = useTranslation()
   const { user: me } = useAuth()
   const clubs = useClubs()
@@ -24,12 +33,12 @@ export function UserFormDialog({ user, onClose }: { user: ManagedUser | null; on
   const isEdit = !!user
   const isSelf = user?.id === me?.id
 
-  const [role, setRole] = useState<Role>(user?.role ?? 'CLUB_ADMIN')
+  const [role, setRole] = useState<Role>(user?.role ?? preset?.role ?? 'CLUB_ADMIN')
   const [name, setName] = useState(user?.name ?? '')
   const [username, setUsername] = useState(user?.username ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
   const [phone, setPhone] = useState(user?.phone ?? '')
-  const [clubId, setClubId] = useState(user?.clubId ?? '')
+  const [clubId, setClubId] = useState(user?.clubId ?? preset?.clubId ?? '')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [copied, setCopied] = useState(false)

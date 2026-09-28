@@ -10,9 +10,10 @@ export async function verifyTvKey(
   if (typeof key !== 'string' || !key) return false;
   const club = await prisma.club.findUnique({
     where: { id: clubId },
-    select: { tvKey: true },
+    select: { tvKey: true, isActive: true },
   });
-  if (!club?.tvKey) return false;
+  // A deactivated club's TV screens stop working.
+  if (!club?.tvKey || !club.isActive) return false;
   const expected = Buffer.from(club.tvKey);
   const actual = Buffer.from(key);
   return actual.length === expected.length && timingSafeEqual(actual, expected);

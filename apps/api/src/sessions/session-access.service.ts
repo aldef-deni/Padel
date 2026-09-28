@@ -19,7 +19,9 @@ export class SessionAccessService {
     const session = await this.prisma.session.findUnique({
       where: { id: sessionId },
       include: {
-        court: { select: { clubId: true } },
+        court: {
+          select: { clubId: true, club: { select: { isActive: true } } },
+        },
         _count: { select: { players: true } },
       },
     });

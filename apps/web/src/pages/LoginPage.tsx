@@ -32,7 +32,10 @@ export function LoginPage() {
       await signIn({ login: login.trim(), password })
       navigate(from, { replace: true })
     } catch (err) {
-      setError(err instanceof ApiRequestError && err.status === 401 ? t('login.invalid') : errorMessage(err, t))
+      if (err instanceof ApiRequestError && err.status === 401) setError(t('login.invalid'))
+      else if (err instanceof ApiRequestError && err.status === 403)
+        setError(/club/i.test(err.message) ? t('login.clubDisabled') : t('login.accountDisabled'))
+      else setError(errorMessage(err, t))
     } finally {
       setSubmitting(false)
     }

@@ -10,6 +10,8 @@ import { SessionPage } from './pages/SessionPage'
 import { TvPage } from './pages/TvPage'
 import { TvSetupPage } from './pages/TvSetupPage'
 import { UsersPage } from './pages/UsersPage'
+import { ClubsPage } from './pages/ClubsPage'
+import { ClubDetailPage } from './pages/ClubDetailPage'
 import { RequireSuperAdmin } from './components/RequireSuperAdmin'
 
 export const router = createBrowserRouter([
@@ -28,7 +30,14 @@ export const router = createBrowserRouter([
           { path: 'courts/:courtId/session', element: <SessionPage /> },
           { path: 'cameras', element: <CamerasPage /> },
           { path: 'tv-setup', element: <TvSetupPage /> },
-          { element: <RequireSuperAdmin />, children: [{ path: 'users', element: <UsersPage /> }] },
+          {
+            element: <RequireSuperAdmin />,
+            children: [
+              { path: 'clubs', element: <ClubsPage /> },
+              { path: 'clubs/:clubId', element: <ClubDetailPage /> },
+              { path: 'users', element: <UsersPage /> },
+            ],
+          },
           { path: '*', element: <Navigate to="/" replace /> },
         ],
       },

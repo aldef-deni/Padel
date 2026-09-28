@@ -1,8 +1,19 @@
 import type { Club } from '@padel/shared'
-import { Camera, ChevronsUpDown, LayoutDashboard, LogOut, Menu, RectangleHorizontal, Tv, Users, X } from 'lucide-react'
+import {
+  Building,
+  Camera,
+  ChevronsUpDown,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  RectangleHorizontal,
+  Tv,
+  Users,
+  X,
+} from 'lucide-react'
 import { useEffect, useState, type ComponentType } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink, Outlet, useLocation } from 'react-router'
+import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { LANGUAGES, setLanguage } from '../i18n'
 import { useAuth } from '../lib/auth-context'
 import { useActiveClub } from '../lib/club-context'
@@ -20,6 +31,7 @@ const NAV: {
   { to: '/courts', key: 'nav.courts', icon: RectangleHorizontal },
   { to: '/cameras', key: 'nav.cameras', icon: Camera },
   { to: '/tv-setup', key: 'nav.tv', icon: Tv },
+  { to: '/clubs', key: 'nav.clubs', icon: Building, superAdminOnly: true },
   { to: '/users', key: 'nav.users', icon: Users, superAdminOnly: true },
 ]
 
@@ -29,6 +41,10 @@ export function Layout() {
   const { club, isLoading } = useActiveClub()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const location = useLocation()
+  const { user } = useAuth()
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN'
+  // Platform pages (clubs, users) work without an active club, e.g. before the first club exists.
+  const needsClub = !['/clubs', '/users'].some((p) => location.pathname.startsWith(p))
   useLockBodyScroll(drawerOpen)
 
   // Close the drawer after navigating.
@@ -71,10 +87,20 @@ export function Layout() {
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
           {isLoading ? (
             <Loading label={t('common.loading')} />
-          ) : club ? (
+          ) : club || !needsClub ? (
             <Outlet context={club} />
           ) : (
-            <EmptyState>{t('errors.noClub')}</EmptyState>
+            <EmptyState>
+              {t('errors.noClub')}
+              {isSuperAdmin && (
+                <>
+                  {' '}
+                  <Link to="/clubs" className="font-medium text-emerald-700 hover:underline">
+                    {t('clubs.add')}
+                  </Link>
+                </>
+              )}
+            </EmptyState>
           )}
         </div>
       </main>

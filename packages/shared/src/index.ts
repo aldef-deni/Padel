@@ -17,6 +17,19 @@ export interface Club {
   slug: string;
   address: string | null;
   timezone: string;
+  city: string | null;
+  description: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  /** Username Instagram tanpa "@". */
+  instagram: string | null;
+  mapsUrl: string | null;
+  /** Jam operasional "HH:mm" di zona waktu klub. */
+  openTime: string | null;
+  closeTime: string | null;
+  /** false = klub dinonaktifkan (admin klub tidak bisa login, sesi/replay/TV berhenti). */
+  isActive: boolean;
   /** URL logo klub (publik), null jika belum diunggah. */
   logoUrl: string | null;
   createdAt: IsoDateString;
@@ -75,8 +88,19 @@ export interface ChangePasswordInput {
 export interface CreateClubInput {
   name: string;
   slug: string;
-  address?: string;
+  address?: string | null;
   timezone?: string;
+  city?: string | null;
+  description?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  instagram?: string | null;
+  mapsUrl?: string | null;
+  openTime?: string | null;
+  closeTime?: string | null;
+  /** Hanya SUPER_ADMIN. */
+  isActive?: boolean;
 }
 export type UpdateClubInput = Partial<CreateClubInput>;
 
@@ -256,6 +280,7 @@ export interface ManagedUser extends User {
 export interface UserListQuery {
   search?: string;
   role?: Role;
+  clubId?: string;
   page?: number;
   pageSize?: number;
 }
@@ -286,3 +311,33 @@ export interface CreateUserInput {
 
 /** Field yang tidak dikirim tidak berubah; null mengosongkan field. */
 export type UpdateUserInput = Partial<CreateUserInput>;
+
+// ---- Kelola klub (SUPER_ADMIN) ----
+
+export interface ClubStats {
+  courts: number;
+  cameras: number;
+  admins: number;
+  activeSessions: number;
+  /** Klip yang diminta 30 hari terakhir. */
+  clips30d: number;
+}
+
+export interface ClubWithStats extends Club {
+  stats: ClubStats;
+}
+
+export interface ClubListQuery {
+  search?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ClubListResponse {
+  items: ClubWithStats[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: { ALL: number; ACTIVE: number; INACTIVE: number };
+}

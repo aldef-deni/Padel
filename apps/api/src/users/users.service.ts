@@ -43,13 +43,16 @@ export class UsersService {
     const search = query.search?.trim();
     const searchWhere: Prisma.UserWhereInput = search
       ? {
+          ...(query.clubId ? { clubId: query.clubId } : {}),
           OR: (['name', 'username', 'email', 'phone'] as const).map(
             (field) => ({
               [field]: { contains: search, mode: 'insensitive' as const },
             }),
           ),
         }
-      : {};
+      : query.clubId
+        ? { clubId: query.clubId }
+        : {};
     const where: Prisma.UserWhereInput = {
       ...searchWhere,
       ...(query.role ? { role: query.role } : {}),

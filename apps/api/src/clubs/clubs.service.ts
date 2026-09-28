@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,12 +12,17 @@ import {
 } from '../auth/auth-user.js';
 import { ClipsService } from '../clips/clips.service.js';
 import { startOfDayIn } from '../common/time.js';
-import { ClipStatus } from '../generated/prisma/client.js';
+import { normalizePhone } from '../auth/phone.js';
+import { ClipStatus, Prisma, Role } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { CreateClubDto } from './dto/create-club.dto.js';
+import { CreateClubDto, ListClubsQuery } from './dto/create-club.dto.js';
 import { UpdateClubDto } from './dto/update-club.dto.js';
 import { ClubOverviewEntity } from './entities/club-overview.entity.js';
-import { ClubEntity, toClubEntity } from './entities/club.entity.js';
+import {
+  ClubEntity,
+  ClubListResponseEntity,
+  toClubEntity,
+} from './entities/club.entity.js';
 import {
   detectLogoType,
   LOGO_CONTENT_TYPES,
@@ -32,7 +39,83 @@ export class ClubsService {
   ) {}
 
   async create(dto: CreateClubDto): Promise<ClubEntity> {
-    return toClubEntity(await this.prisma.club.create({ data: dto }));
+    const data = normalizeClubInput(dto) as Prisma.ClubCreateInput;
+    return toClubEntity(await this.prisma.club.create({ data }));
+  }
+
+  /** SUPER_ADMIN list: search, status filter, pagination and per-club stats. */
+  async listWithStats(query: ListClubsQuery): Promise<ClubListResponseEntity> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 12;
+    const search = query.search?.trim();
+    const searchWhere: Prisma.ClubWhereInput = search
+      ? {
+          OR: (['name', 'slug', 'city'] as const).map((field) => ({
+            [field]: { contains: search, mode: 'insensitive' as const },
+          })),
+        }
+      : {};
+    const where: Prisma.ClubWhereInput = {
+      ...searchWhere,
+      ...(query.status ? { isActive: query.status === 'ACTIVE' } : {}),
+    };
+
+    const [clubs, total, grouped] = await Promise.all([
+      this.prisma.club.findMany({
+        where,
+        include: {
+          _count: {
+            select: {
+              courts: true,
+              admins: { where: { role: Role.CLUB_ADMIN } },
+            },
+          },
+        },
+        orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.club.count({ where }),
+      this.prisma.club.groupBy({
+        by: ['isActive'],
+        where: searchWhere,
+        _count: { _all: true },
+      }),
+    ]);
+
+    const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+    const items = await Promise.all(
+      clubs.map(async ({ _count, ...club }) => {
+        const [cameras, activeSessions, clips30d] = await Promise.all([
+          this.prisma.camera.count({ where: { court: { clubId: club.id } } }),
+          this.prisma.session.count({
+            where: { endedAt: null, court: { clubId: club.id } },
+          }),
+          this.prisma.clip.count({
+            where: {
+              createdAt: { gte: since },
+              camera: { court: { clubId: club.id } },
+            },
+          }),
+        ]);
+        return Object.assign(toClubEntity(club), {
+          stats: {
+            courts: _count.courts,
+            cameras,
+            admins: _count.admins,
+            activeSessions,
+            clips30d,
+          },
+        });
+      }),
+    );
+
+    const counts = { ALL: 0, ACTIVE: 0, INACTIVE: 0 };
+    for (const g of grouped) {
+      counts[g.isActive ? 'ACTIVE' : 'INACTIVE'] = g._count._all;
+      counts.ALL += g._count._all;
+    }
+    return { items, total, page, pageSize, counts };
   }
 
   async findAll(user: AuthUser): Promise<ClubEntity[]> {
@@ -56,13 +139,33 @@ export class ClubsService {
     dto: UpdateClubDto,
   ): Promise<ClubEntity> {
     assertClubAccess(user, id);
+    // A club admin can edit the profile but not (re)activate their own club.
+    if (dto.isActive !== undefined && user.role !== Role.SUPER_ADMIN) {
+      throw new ForbiddenException(
+        'Only a super admin can change the club status',
+      );
+    }
     return toClubEntity(
-      await this.prisma.club.update({ where: { id }, data: dto }),
+      await this.prisma.club.update({
+        where: { id },
+        data: normalizeClubInput(dto),
+      }),
     );
   }
 
+  /** Only empty clubs can be deleted; otherwise deactivate. */
   async remove(id: string) {
-    const club = await this.prisma.club.delete({ where: { id } });
+    const club = await this.prisma.club.findUnique({
+      where: { id },
+      include: { _count: { select: { courts: true, admins: true } } },
+    });
+    if (!club) throw new NotFoundException(`Club ${id} not found`);
+    if (club._count.courts > 0 || club._count.admins > 0) {
+      throw new ConflictException(
+        `Club still has ${club._count.courts} court(s) and ${club._count.admins} admin(s); remove them first or deactivate the club`,
+      );
+    }
+    await this.prisma.club.delete({ where: { id } });
     if (club.logoFile) await this.logos.remove(club.logoFile);
   }
 
@@ -167,4 +270,50 @@ export class ClubsService {
     if (!club) throw new NotFoundException(`Club ${id} not found`);
     return club;
   }
+}
+
+const NULLABLE = [
+  'address',
+  'city',
+  'description',
+  'phone',
+  'email',
+  'website',
+  'instagram',
+  'mapsUrl',
+  'openTime',
+  'closeTime',
+] as const;
+
+/**
+ * Trims text, turns "" into null, normalizes the phone to E.164, lowercases the email and
+ * reduces Instagram input ("@user", profile URL) to the bare username.
+ */
+function normalizeClubInput(dto: UpdateClubDto): Prisma.ClubUpdateInput {
+  const data = Object.assign({}, dto) as Record<string, unknown>;
+  if (typeof dto.name === 'string') data.name = dto.name.trim();
+  for (const key of NULLABLE) {
+    const value = dto[key];
+    if (typeof value === 'string') data[key] = value.trim() || null;
+  }
+  if (typeof data.phone === 'string') {
+    const phone = normalizePhone(data.phone);
+    if (!phone)
+      throw new BadRequestException('phone must be a valid phone number');
+    data.phone = phone;
+  }
+  if (typeof data.email === 'string') data.email = data.email.toLowerCase();
+  if (typeof data.instagram === 'string') {
+    const handle = data.instagram
+      .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+      .replace(/^@/, '')
+      .replace(/[/?#].*$/, '');
+    if (!/^[A-Za-z0-9._]{1,30}$/.test(handle)) {
+      throw new BadRequestException(
+        'instagram must be a username or profile URL',
+      );
+    }
+    data.instagram = handle;
+  }
+  return data as Prisma.ClubUpdateInput;
 }

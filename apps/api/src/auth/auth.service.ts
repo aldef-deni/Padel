@@ -56,6 +56,7 @@ export class AuthService implements OnModuleInit {
     const id = login.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({
       where: id.includes('@') ? { email: id } : { username: id },
+      include: { club: { select: { isActive: true } } },
     });
     const valid = await verifyPassword(
       password,
@@ -71,6 +72,9 @@ export class AuthService implements OnModuleInit {
     }
     // Only revealed after a correct password.
     if (!user.isActive) throw new ForbiddenException('Account is disabled');
+    if (user.role === Role.CLUB_ADMIN && user.club && !user.club.isActive) {
+      throw new ForbiddenException('Club is disabled');
+    }
     return this.issueToken(await this.touchLogin(user.id));
   }
 
