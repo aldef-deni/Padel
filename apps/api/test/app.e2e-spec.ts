@@ -3,9 +3,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
-import { OTP_SENDER, type OtpSender } from '../src/auth/otp/otp-sender.js';
 import { hashPassword } from '../src/auth/password.js';
 import { Role } from '../src/generated/prisma/client.js';
+import { MAILER, type Mailer } from '../src/mail/mailer.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
 // Membutuhkan PostgreSQL dari infra/ yang sudah dimigrasi (DATABASE_URL di .env).
@@ -17,13 +17,17 @@ describe('API (e2e)', () => {
   const password = 'rahasia-e2e-123';
   const superEmail = `super-${run}@e2e.test`;
   const clubAdminEmail = `klub-${run}@e2e.test`;
-  const phones = [randomPhone(), randomPhone()];
+  const playerEmails = [`pemain-a-${run}@e2e.test`, `pemain-b-${run}@e2e.test`];
 
-  // Captures OTP codes instead of logging them.
+  // Captures sign-in codes from the emails instead of sending them.
   const sentCodes = new Map<string, string>();
-  const fakeSender: OtpSender = {
-    send: async (phone, code) => {
-      sentCodes.set(phone, code);
+  const fakeMailer: Mailer = {
+    kind: 'log',
+    send: async (message) => {
+      sentCodes.set(
+        message.to,
+        /(\d{3}) (\d{3})/.exec(message.text)!.slice(1).join(''),
+      );
     },
   };
 
@@ -39,8 +43,8 @@ describe('API (e2e)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideProvider(OTP_SENDER)
-      .useValue(fakeSender)
+      .overrideProvider(MAILER)
+      .useValue(fakeMailer)
       .compile();
     app = moduleFixture.createNestApplication();
     configureApp(app);
@@ -76,13 +80,12 @@ describe('API (e2e)', () => {
   afterAll(async () => {
     await prisma.user.deleteMany({
       where: {
-        OR: [
-          { email: { endsWith: `-${run}@e2e.test` } },
-          { phone: { in: phones } },
-        ],
+        OR: [{ email: { endsWith: `-${run}@e2e.test` } }],
       },
     });
-    await prisma.otpCode.deleteMany({ where: { phone: { in: phones } } });
+    await prisma.otpCode.deleteMany({
+      where: { target: { in: playerEmails } },
+    });
     await prisma.camera.deleteMany({
       where: { court: { clubId: { in: [ownClubId, otherClubId] } } },
     });
@@ -111,8 +114,8 @@ describe('API (e2e)', () => {
     expect(Object.keys(res.body.paths)).toEqual(
       expect.arrayContaining([
         '/api/auth/admin/login',
-        '/api/auth/otp/request',
-        '/api/auth/otp/verify',
+        '/api/auth/email/request',
+        '/api/auth/email/verify',
         '/api/clubs',
         '/api/courts/{id}',
         '/api/cameras',
@@ -236,41 +239,49 @@ describe('API (e2e)', () => {
     });
   });
 
-  describe('player OTP login', () => {
+  describe('player sign-in by email code', () => {
     it('logs in a new player with a valid code', async () => {
-      const local = `0${phones[0].slice(3)}`; // "+62812..." -> "0812..."
       const requested = await request(server())
-        .post('/api/auth/otp/request')
-        .send({ phone: local })
+        .post('/api/auth/email/request')
+        .send({ email: `  ${playerEmails[0].toUpperCase()} ` })
         .expect(202);
-      expect(requested.body.phone).toBe(phones[0]);
+      expect(requested.body).toMatchObject({
+        email: playerEmails[0],
+        expiresInSec: 600,
+        resendInSec: 60,
+      });
 
       // Resend cooldown.
       await request(server())
-        .post('/api/auth/otp/request')
-        .send({ phone: phones[0] })
+        .post('/api/auth/email/request')
+        .send({ email: playerEmails[0] })
         .expect(429);
 
-      const code = sentCodes.get(phones[0])!;
+      const code = sentCodes.get(playerEmails[0])!;
+      expect(code).toMatch(/^\d{6}$/);
       const wrong = code === '000000' ? '111111' : '000000';
       await request(server())
-        .post('/api/auth/otp/verify')
-        .send({ phone: phones[0], code: wrong })
+        .post('/api/auth/email/verify')
+        .send({ email: playerEmails[0], code: wrong })
         .expect(401);
 
       const res = await request(server())
-        .post('/api/auth/otp/verify')
-        .send({ phone: local, code })
+        .post('/api/auth/email/verify')
+        .send({ email: playerEmails[0], code })
         .expect(200);
-      expect(res.body.user).toMatchObject({ phone: phones[0], role: 'PLAYER' });
+      expect(res.body.user).toMatchObject({
+        email: playerEmails[0],
+        phone: null,
+        role: 'PLAYER',
+      });
 
       // A code can be used only once.
       await request(server())
-        .post('/api/auth/otp/verify')
-        .send({ phone: phones[0], code })
+        .post('/api/auth/email/verify')
+        .send({ email: playerEmails[0], code })
         .expect(401);
 
-      // Players cannot use admin CRUD or change a password.
+      // Players cannot use admin CRUD, change a password, or change their login email.
       await request(server())
         .get('/api/clubs')
         .set(auth(res.body.accessToken))
@@ -281,6 +292,11 @@ describe('API (e2e)', () => {
         .send({ currentPassword: 'x', newPassword: 'password-panjang-123' })
         .expect(403);
       await request(server())
+        .patch('/api/auth/me')
+        .set(auth(res.body.accessToken))
+        .send({ email: `lain-${run}@e2e.test` })
+        .expect(400);
+      await request(server())
         .get('/api/auth/me')
         .set(auth(res.body.accessToken))
         .expect(200);
@@ -288,28 +304,53 @@ describe('API (e2e)', () => {
 
     it('locks a code after 5 wrong attempts', async () => {
       await request(server())
-        .post('/api/auth/otp/request')
-        .send({ phone: phones[1] })
+        .post('/api/auth/email/request')
+        .send({ email: playerEmails[1] })
         .expect(202);
-      const code = sentCodes.get(phones[1])!;
+      const code = sentCodes.get(playerEmails[1])!;
       const wrong = code === '000000' ? '111111' : '000000';
       for (let i = 0; i < 5; i++) {
         await request(server())
-          .post('/api/auth/otp/verify')
-          .send({ phone: phones[1], code: wrong })
+          .post('/api/auth/email/verify')
+          .send({ email: playerEmails[1], code: wrong })
           .expect(401);
       }
       await request(server())
-        .post('/api/auth/otp/verify')
-        .send({ phone: phones[1], code })
+        .post('/api/auth/email/verify')
+        .send({ email: playerEmails[1], code })
         .expect(401);
     });
 
-    it('rejects invalid phone numbers', () =>
-      request(server())
+    it('refuses admin emails and invalid input', async () => {
+      await request(server())
+        .post('/api/auth/email/request')
+        .send({ email: 'bukan-email' })
+        .expect(400);
+      await request(server())
+        .post('/api/auth/email/request')
+        .send({ email: superEmail })
+        .expect(202);
+      await request(server())
+        .post('/api/auth/email/verify')
+        .send({ email: superEmail, code: sentCodes.get(superEmail) })
+        .expect(401); // admins sign in with a password
+    });
+
+    it('hides phone OTP until SMS/WhatsApp is connected', async () => {
+      await request(server())
         .post('/api/auth/otp/request')
-        .send({ phone: '12' })
-        .expect(400));
+        .send({ phone: '081234567890' })
+        .expect(404);
+      await request(server())
+        .post('/api/auth/otp/verify')
+        .send({ phone: '081234567890', code: '123456' })
+        .expect(404);
+      const docs = await request(server()).get('/docs-json').expect(200);
+      expect(Object.keys(docs.body.paths)).not.toContain(
+        '/api/auth/otp/request',
+      );
+      expect(Object.keys(docs.body.paths)).toContain('/api/auth/email/request');
+    });
   });
 
   describe('super admin', () => {
@@ -510,7 +551,3 @@ describe('API (e2e)', () => {
     });
   });
 });
-
-function randomPhone() {
-  return `+62812${Math.floor(1e7 + Math.random() * 9e7)}`;
-}

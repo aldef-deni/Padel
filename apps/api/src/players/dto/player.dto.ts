@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
@@ -13,10 +13,16 @@ import {
 } from 'class-validator';
 
 export class CreatePlayerDto {
-  @ApiProperty({ example: '081234567890', description: 'Nomor login OTP' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    example: '081234567890',
+    description: 'Nomor HP dan/atau email (minimal salah satu)',
+  })
+  @IsOptional()
   @IsString()
   @MaxLength(32)
-  phone: string;
+  phone?: string | null;
 
   @ApiPropertyOptional({
     type: String,
@@ -52,11 +58,11 @@ export class UpdatePlayerDto {
   @MaxLength(100)
   name?: string | null;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
   @IsString()
   @MaxLength(32)
-  phone?: string;
+  phone?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()

@@ -104,6 +104,29 @@ describe('Club players (e2e)', () => {
       .set(auth(adminA))
       .send({ phone: '12' })
       .expect(400);
+    await request(server())
+      .post(players(clubA))
+      .set(auth(adminA))
+      .send({ name: 'Tanpa kontak' })
+      .expect(400);
+    const byEmail = await request(server())
+      .post(players(clubA))
+      .set(auth(adminA))
+      .send({ email: `Email-${run}@E2E.test`, name: 'Pemain Email' })
+      .expect(201);
+    expect(byEmail.body).toMatchObject({
+      existingAccount: false,
+      player: {
+        email: `email-${run}@e2e.test`,
+        phone: null,
+        name: 'Pemain Email',
+      },
+    });
+    await request(server())
+      .delete(`${players(clubA)}/${byEmail.body.player.id}`)
+      .set(auth(adminA))
+      .expect(204);
+    await prisma.user.delete({ where: { id: byEmail.body.player.id } });
 
     const created = await request(server())
       .post(players(clubA))

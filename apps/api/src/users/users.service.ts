@@ -212,8 +212,10 @@ export class UsersService {
   /** Role rules that must hold after every create/update. */
   private async validateShape(shape: Shape) {
     if (shape.role === Role.PLAYER) {
-      if (!shape.phone)
-        throw new BadRequestException('phone is required for players');
+      // Players sign in with a code sent to their email (or phone, once OTP is connected).
+      if (!shape.phone && !shape.email) {
+        throw new BadRequestException('phone or email is required for players');
+      }
       return;
     }
     if (!shape.username && !shape.email) {

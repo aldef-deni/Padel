@@ -166,7 +166,11 @@ export function PlayersPage() {
           player={editing === 'new' ? null : editing}
           onClose={() => setEditing(null)}
           onCreated={(result) =>
-            setNotice(result.existingAccount ? t('players.linkedNotice', { phone: result.player.phone }) : null)
+            setNotice(
+              result.existingAccount
+                ? t('players.linkedNotice', { contact: result.player.email ?? result.player.phone })
+                : null,
+            )
           }
         />
       )}

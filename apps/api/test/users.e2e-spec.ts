@@ -279,7 +279,7 @@ describe('Users CRUD (e2e)', () => {
       role: 'SUPER_ADMIN',
       username: `pl-${run}`,
     }).expect(400);
-    await patch(saId, { role: 'PLAYER' }).expect(400); // no phone
+    await patch(saId, { role: 'PLAYER', email: null }).expect(400); // neither phone nor email
     const player = (
       await patch(saId, { role: 'PLAYER', phone: `0812${digits}` }).expect(200)
     ).body;

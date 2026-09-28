@@ -26,3 +26,9 @@ export class OtpRequestedEntity {
   @ApiProperty({ example: 300 }) expiresInSec: number;
   @ApiProperty({ example: 60 }) resendInSec: number;
 }
+
+export class EmailCodeRequestedEntity {
+  @ApiProperty({ example: 'pemain@contoh.id' }) email: string;
+  @ApiProperty({ example: 600 }) expiresInSec: number;
+  @ApiProperty({ example: 60 }) resendInSec: number;
+}

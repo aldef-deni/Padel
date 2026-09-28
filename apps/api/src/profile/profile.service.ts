@@ -31,8 +31,15 @@ export class ProfileService {
     if (dto.name !== undefined) data.name = clean(dto.name);
     if (dto.username !== undefined)
       data.username = clean(dto.username)?.toLowerCase() ?? null;
-    if (dto.email !== undefined)
+    if (dto.email !== undefined) {
+      // A player's email is their login; changing it needs a verification code, not a form.
+      if (user.role === Role.PLAYER) {
+        throw new BadRequestException(
+          'Players change their email through a verification code',
+        );
+      }
       data.email = clean(dto.email)?.toLowerCase() ?? null;
+    }
     if (dto.phone !== undefined) {
       // A player's phone is their login; changing it needs an OTP flow, not a form.
       if (user.role === Role.PLAYER) {

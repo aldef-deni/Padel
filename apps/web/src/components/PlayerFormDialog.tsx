@@ -30,23 +30,23 @@ export function PlayerFormDialog({
   const [isBlocked, setIsBlocked] = useState(player?.isBlocked ?? false)
   const [submitted, setSubmitted] = useState(false)
 
-  const clientError = submitted && !phone.trim() ? t('players.errors.phoneRequired') : null
+  const clientError = submitted && !phone.trim() && !email.trim() ? t('players.errors.contactRequired') : null
   const serverError = create.error ?? update.error
   const pending = create.isPending || update.isPending
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     setSubmitted(true)
-    if (!phone.trim()) return
+    if (!phone.trim() && !email.trim()) return
     const orNull = (v: string) => v.trim() || null
     if (isEdit) {
       update.mutate(
-        { id: player.id, phone: phone.trim(), name: orNull(name), email: orNull(email), note: orNull(note), isBlocked },
+        { id: player.id, phone: orNull(phone), name: orNull(name), email: orNull(email), note: orNull(note), isBlocked },
         { onSuccess: onClose },
       )
     } else {
       create.mutate(
-        { phone: phone.trim(), name: orNull(name), email: orNull(email), note: orNull(note) },
+        { phone: orNull(phone), name: orNull(name), email: orNull(email), note: orNull(note) },
         {
           onSuccess: (result) => {
             onCreated?.(result)
@@ -74,24 +74,30 @@ export function PlayerFormDialog({
       }
     >
       <form id="player-form" onSubmit={onSubmit} className="space-y-5" noValidate>
-        <Field label={t('players.phone')} hint={t('players.phoneHint')}>
+        <Field label={t('players.email')} hint={t('players.emailHint')}>
           <Input
-            icon={Phone}
-            type="tel"
-            inputMode="tel"
-            placeholder="0812…"
+            icon={Mail}
+            type="email"
             autoFocus={!isEdit}
-            value={phone}
-            maxLength={32}
-            onChange={(e) => setPhone(e.target.value)}
+            value={email}
+            maxLength={254}
+            onChange={(e) => setEmail(e.target.value)}
           />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t('players.name')}>
             <Input icon={UserRound} value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Field label={t('players.email')}>
-            <Input icon={Mail} type="email" value={email} maxLength={254} onChange={(e) => setEmail(e.target.value)} />
+          <Field label={t('players.phone')} hint={t('players.phoneHint')}>
+            <Input
+              icon={Phone}
+              type="tel"
+              inputMode="tel"
+              placeholder="0812…"
+              value={phone}
+              maxLength={32}
+              onChange={(e) => setPhone(e.target.value)}
+            />
           </Field>
         </div>
         <Field label={t('players.note')} hint={t('players.noteHint')}>

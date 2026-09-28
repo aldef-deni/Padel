@@ -17,7 +17,8 @@ Target awal: 1 klub, 2–3 lapangan, 1–2 kamera per lapangan (1080p60).
 ## Alur inti
 1. Kamera push ke MediaMTX path `court-<id>`. MediaMTX merekam fmp4 ke
    /opt/padel/data/recordings dan menghapus otomatis setelah 2 jam (rolling buffer).
-2. Pemain scan QR lapangan -> bergabung ke Session aktif lapangan itu.
+2. Pemain masuk (sementara: kode ke email; OTP WhatsApp/SMS menyusul), scan QR lapangan ->
+   bergabung ke Session aktif lapangan itu.
 3. Pemain tekan tombol replay di app -> API membuat Clip (PENDING) -> job BullMQ.
 4. Worker ambil potongan dari MediaMTX playback server
    (http://localhost:9996/get?path=court-1&start=<RFC3339>&duration=<detik>),
@@ -46,6 +47,8 @@ SUPER_ADMIN (pemilik platform), CLUB_ADMIN (pengelola klub), PLAYER (pemain).
   Detail & cara update: infra/deploy/README.md.
 
 ## Backlog
+- Login pemain lewat OTP WhatsApp/SMS (pilihan channel) setelah penyedia dipilih; sementara lewat email.
+- Isi SMTP produksi (SMTP_HOST dkk. di apps/api/.env) agar kode masuk benar-benar terkirim ke email.
 - Refresh token (sekarang hanya access token 7 hari).
 - Pembersihan berkala tabel OtpCode (kode kedaluwarsa/terpakai).
 - Ganti password akun seed (admin@padel.local, klub@padel.local) sebelum go-live.

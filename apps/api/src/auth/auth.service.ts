@@ -5,20 +5,25 @@ import {
   HttpStatus,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   OnModuleInit,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
-import { Role, type User } from '../generated/prisma/client.js';
+import { OtpChannel, Role, type User } from '../generated/prisma/client.js';
+import { MAILER, type Mailer } from '../mail/mailer.js';
+import { loginCodeEmail } from '../mail/templates.js';
 import { userAvatarUrl } from '../common/avatar-url.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { JwtPayload } from './auth-user.js';
 import { ADMIN_ROLES } from './decorators/roles.decorator.js';
 import {
   AuthResponseEntity,
+  EmailCodeRequestedEntity,
   OtpRequestedEntity,
   UserEntity,
 } from './dto/auth.entities.js';
@@ -26,7 +31,9 @@ import { OTP_SENDER, type OtpSender } from './otp/otp-sender.js';
 import { hashPassword, verifyPassword } from './password.js';
 import { normalizePhone } from './phone.js';
 
-const OTP_TTL_SEC = 5 * 60;
+const PHONE_OTP_TTL_SEC = 5 * 60;
+// Email can take a little longer to arrive.
+const EMAIL_CODE_TTL_SEC = 10 * 60;
 const OTP_RESEND_SEC = 60;
 const OTP_MAX_ATTEMPTS = 5;
 
@@ -35,12 +42,14 @@ export class AuthService implements OnModuleInit {
   // Verified against when the login is unknown, so both cases take equally long.
   private dummyHash: string;
   private readonly otpSecret: string;
+  private readonly logger = new Logger(AuthService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     config: ConfigService,
     @Inject(OTP_SENDER) private readonly otpSender: OtpSender,
+    @Inject(MAILER) private readonly mailer: Mailer,
   ) {
     this.otpSecret = config.getOrThrow<string>('JWT_SECRET');
   }
@@ -79,11 +88,79 @@ export class AuthService implements OnModuleInit {
     return this.issueToken(await this.touchLogin(user.id));
   }
 
+  /** Phone OTP (WhatsApp/SMS): hidden until a provider is connected (PHONE_OTP_ENABLED). */
   async requestOtp(rawPhone: string): Promise<OtpRequestedEntity> {
     const phone = this.parsePhone(rawPhone);
+    const code = await this.issueCode(
+      OtpChannel.WHATSAPP,
+      phone,
+      PHONE_OTP_TTL_SEC,
+    );
+    await this.otpSender.send(phone, code);
+    return {
+      phone,
+      expiresInSec: PHONE_OTP_TTL_SEC,
+      resendInSec: OTP_RESEND_SEC,
+    };
+  }
 
+  async verifyOtp(rawPhone: string, code: string): Promise<AuthResponseEntity> {
+    const phone = this.parsePhone(rawPhone);
+    await this.consumeCode(OtpChannel.WHATSAPP, phone, code);
+    const user =
+      (await this.prisma.user.findUnique({ where: { phone } })) ??
+      (await this.prisma.user.create({ data: { phone, role: Role.PLAYER } }));
+    return this.playerLogin(user);
+  }
+
+  /** Player sign-in step 1: email a 6-digit code. */
+  async requestEmailCode(rawEmail: string): Promise<EmailCodeRequestedEntity> {
+    const email = rawEmail.trim().toLowerCase();
+    const code = await this.issueCode(
+      OtpChannel.EMAIL,
+      email,
+      EMAIL_CODE_TTL_SEC,
+    );
+    try {
+      await this.mailer.send(
+        loginCodeEmail(email, code, EMAIL_CODE_TTL_SEC / 60),
+      );
+    } catch (err) {
+      this.logger.error(
+        `Sending login code to ${email} failed: ${(err as Error).message}`,
+      );
+      throw new ServiceUnavailableException(
+        'Could not send the email, try again later',
+      );
+    }
+    return {
+      email,
+      expiresInSec: EMAIL_CODE_TTL_SEC,
+      resendInSec: OTP_RESEND_SEC,
+    };
+  }
+
+  /** Player sign-in step 2: the code from the email; the first sign-in creates the account. */
+  async verifyEmailCode(
+    rawEmail: string,
+    code: string,
+  ): Promise<AuthResponseEntity> {
+    const email = rawEmail.trim().toLowerCase();
+    await this.consumeCode(OtpChannel.EMAIL, email, code);
+    const user =
+      (await this.prisma.user.findUnique({ where: { email } })) ??
+      (await this.prisma.user.create({ data: { email, role: Role.PLAYER } }));
+    return this.playerLogin(user);
+  }
+
+  /** Creates a one-time code for a target (phone or email), enforcing the resend cooldown. */
+  private async issueCode(
+    channel: OtpChannel,
+    target: string,
+    ttlSec: number,
+  ): Promise<string> {
     const latest = await this.prisma.otpCode.findFirst({
-      where: { phone },
+      where: { target, channel },
       orderBy: { createdAt: 'desc' },
     });
     const sinceLastSec = latest
@@ -93,33 +170,30 @@ export class AuthService implements OnModuleInit {
       throw new HttpException(
         {
           statusCode: HttpStatus.TOO_MANY_REQUESTS,
-          message: 'OTP was sent recently, try again later',
+          message: 'A code was sent recently, try again later',
           retryAfterSec: Math.ceil(OTP_RESEND_SEC - sinceLastSec),
         },
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
-
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
     await this.prisma.otpCode.create({
       data: {
-        phone,
-        codeHash: this.hashOtp(phone, code),
-        expiresAt: new Date(Date.now() + OTP_TTL_SEC * 1000),
+        target,
+        channel,
+        codeHash: this.hashOtp(channel, target, code),
+        expiresAt: new Date(Date.now() + ttlSec * 1000),
       },
     });
-    await this.otpSender.send(phone, code);
-
-    return { phone, expiresInSec: OTP_TTL_SEC, resendInSec: OTP_RESEND_SEC };
+    return code;
   }
 
-  async verifyOtp(rawPhone: string, code: string): Promise<AuthResponseEntity> {
-    const phone = this.parsePhone(rawPhone);
+  /** Checks and consumes the latest code for a target; throws 401 on any mismatch. */
+  private async consumeCode(channel: OtpChannel, target: string, code: string) {
     const invalid = new UnauthorizedException('Invalid or expired code');
-
     // Only the most recent code counts; requesting a new one invalidates older ones.
     const otp = await this.prisma.otpCode.findFirst({
-      where: { phone },
+      where: { target, channel },
       orderBy: { createdAt: 'desc' },
     });
     if (!otp || otp.consumedAt || otp.expiresAt < new Date()) throw invalid;
@@ -132,7 +206,7 @@ export class AuthService implements OnModuleInit {
     if (!allowed) throw invalid;
 
     const expected = Buffer.from(otp.codeHash, 'hex');
-    const actual = Buffer.from(this.hashOtp(phone, code), 'hex');
+    const actual = Buffer.from(this.hashOtp(channel, target, code), 'hex');
     if (!timingSafeEqual(actual, expected)) throw invalid;
 
     const { count: consumed } = await this.prisma.otpCode.updateMany({
@@ -140,10 +214,9 @@ export class AuthService implements OnModuleInit {
       data: { consumedAt: new Date() },
     });
     if (!consumed) throw invalid;
+  }
 
-    const user =
-      (await this.prisma.user.findUnique({ where: { phone } })) ??
-      (await this.prisma.user.create({ data: { phone, role: Role.PLAYER } }));
+  private async playerLogin(user: User): Promise<AuthResponseEntity> {
     if (user.role !== Role.PLAYER) {
       throw new UnauthorizedException('Admin accounts must use password login');
     }
@@ -213,9 +286,9 @@ export class AuthService implements OnModuleInit {
     return phone;
   }
 
-  private hashOtp(phone: string, code: string): string {
+  private hashOtp(channel: OtpChannel, target: string, code: string): string {
     return createHmac('sha256', this.otpSecret)
-      .update(`${phone}:${code}`)
+      .update(`${channel}:${target}:${code}`)
       .digest('hex');
   }
 }

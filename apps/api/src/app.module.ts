@@ -15,6 +15,7 @@ import { TvModule } from './tv/tv.module.js';
 import { UsersModule } from './users/users.module.js';
 import { PlayersModule } from './players/players.module.js';
 import { ProfileModule } from './profile/profile.module.js';
+import { MailModule } from './mail/mail.module.js';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ProfileModule } from './profile/profile.module.js';
       }),
     }),
     PrismaModule,
+    MailModule,
     AuthModule,
     ClubsModule,
     CourtsModule,

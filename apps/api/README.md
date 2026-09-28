@@ -54,14 +54,17 @@ Semua route butuh token kecuali yang ditandai `@Public()` (health, login, OTP).
 | Endpoint | Untuk | Body |
 |---|---|---|
 | `POST /api/auth/admin/login` | SUPER_ADMIN, CLUB_ADMIN | `{ login, password }`, `login` = email atau username |
-| `POST /api/auth/otp/request` | pemain | `{ phone }`: `0812...` atau `+62812...` |
-| `POST /api/auth/otp/verify` | pemain | `{ phone, code }` → akun PLAYER dibuat otomatis saat login pertama |
-| `PATCH /api/auth/password` | SUPER_ADMIN, CLUB_ADMIN | `{ currentPassword, newPassword }` (min. 12 karakter) → token baru |
+| `POST /api/auth/email/request` | pemain | `{ email }` → kode 6 digit dikirim ke email (berlaku 10 menit) |
+| `POST /api/auth/email/verify` | pemain | `{ email, code }` → akun PLAYER dibuat otomatis saat masuk pertama kali |
 | `GET /api/auth/me` | semua | user yang sedang login |
 
-**OTP:** 6 digit, berlaku 5 menit, kirim ulang paling cepat 60 detik, maksimal 5 percobaan per kode.
-Untuk sekarang kode hanya ditulis ke log server (`WARN [OTP] OTP untuk +62...: 123456`).
-Pengiriman WhatsApp nanti cukup mengganti provider `OTP_SENDER` di `auth.module.ts`.
+**Masuk pemain (sementara lewat email):** kode 6 digit, berlaku 10 menit, kirim ulang paling cepat 60 detik,
+maksimal 5 percobaan per kode, hanya kode terbaru yang berlaku. Email dikirim lewat SMTP (`SMTP_HOST`,
+`SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` di `.env`); tanpa `SMTP_HOST` kode hanya ditulis ke log
+server (`WARN [Mail] ... Kode masuk Padel Replay kamu: 123 456`).
+
+**OTP nomor HP (WhatsApp/SMS) disembunyikan** sampai penyedianya terhubung: `/api/auth/otp/*` membalas 404
+dan tidak tampil di Swagger. Kodenya tetap ada (`OTP_SENDER`); aktifkan dengan `PHONE_OTP_ENABLED=true`.
 
 **Hak akses CRUD:**
 

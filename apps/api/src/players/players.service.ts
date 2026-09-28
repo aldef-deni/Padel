@@ -84,20 +84,36 @@ export class PlayersService {
     return { items, total, page, pageSize, counts };
   }
 
-  /** Adds a player by phone; an existing PLAYER account is linked instead of duplicated. */
+  /**
+   * Adds a player by phone and/or email; an existing PLAYER account with that phone or
+   * email is linked instead of duplicated.
+   */
   async create(
     actor: AuthUser,
     clubId: string,
     dto: CreatePlayerDto,
   ): Promise<CreateClubPlayerResponseEntity> {
     await this.assertClub(actor, clubId);
-    const phone = parsePhone(dto.phone);
-    const existing = await this.prisma.user.findUnique({ where: { phone } });
+    const phone = clean(dto.phone) ? parsePhone(dto.phone!) : null;
+    const email = cleanEmail(dto.email);
+    if (!phone && !email)
+      throw new BadRequestException('phone or email is required');
+
+    const [byPhone, byEmail] = await Promise.all([
+      phone ? this.prisma.user.findUnique({ where: { phone } }) : null,
+      email ? this.prisma.user.findUnique({ where: { email } }) : null,
+    ]);
+    if (byPhone && byEmail && byPhone.id !== byEmail.id) {
+      throw new ConflictException(
+        'Phone and email belong to different accounts',
+      );
+    }
+    const existing = byPhone ?? byEmail;
 
     if (existing) {
       if (existing.role !== Role.PLAYER) {
         throw new ConflictException(
-          'This phone number belongs to an admin account',
+          'This phone number or email belongs to an admin account',
         );
       }
       const member = await this.prisma.clubMember.findUnique({
@@ -110,7 +126,8 @@ export class PlayersService {
         where: { id: existing.id },
         data: {
           name: existing.name ?? clean(dto.name),
-          email: existing.email ?? cleanEmail(dto.email),
+          email: existing.email ?? email,
+          phone: existing.phone ?? phone,
         },
       });
     }
@@ -119,12 +136,7 @@ export class PlayersService {
       existing?.id ??
       (
         await this.prisma.user.create({
-          data: {
-            phone,
-            role: Role.PLAYER,
-            name: clean(dto.name),
-            email: cleanEmail(dto.email),
-          },
+          data: { phone, email, role: Role.PLAYER, name: clean(dto.name) },
         })
       ).id;
     const member = await this.prisma.clubMember.create({
@@ -140,11 +152,17 @@ export class PlayersService {
     userId: string,
     dto: UpdatePlayerDto,
   ): Promise<ClubPlayerEntity> {
-    await this.findMember(actor, clubId, userId);
+    const current = await this.findMember(actor, clubId, userId);
     const user: Prisma.UserUpdateInput = {};
     if (dto.name !== undefined) user.name = clean(dto.name);
     if (dto.email !== undefined) user.email = cleanEmail(dto.email);
-    if (dto.phone !== undefined) user.phone = parsePhone(dto.phone);
+    if (dto.phone !== undefined)
+      user.phone = clean(dto.phone) ? parsePhone(dto.phone!) : null;
+
+    const phone = dto.phone === undefined ? current.user.phone : user.phone;
+    const email = dto.email === undefined ? current.user.email : user.email;
+    if (!phone && !email)
+      throw new BadRequestException('phone or email is required');
 
     const member = await this.prisma.clubMember.update({
       where: { clubId_userId: { clubId, userId } },

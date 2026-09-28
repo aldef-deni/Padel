@@ -87,7 +87,14 @@ export interface ChangePasswordInput {
   newPassword: string;
 }
 
-/** PATCH /api/auth/me — profil sendiri. Pemain tidak bisa mengganti nomor di sini (lewat OTP). */
+/** Hasil POST /api/auth/email/request: kode masuk pemain dikirim ke email. */
+export interface EmailCodeRequested {
+  email: string;
+  expiresInSec: number;
+  resendInSec: number;
+}
+
+/** PATCH /api/auth/me — profil sendiri. Pemain tidak bisa mengganti nomor/email login di sini. */
 export interface UpdateProfileInput {
   name?: string | null;
   username?: string | null;
@@ -395,8 +402,8 @@ export interface ClubPlayerListResponse {
 }
 
 export interface CreateClubPlayerInput {
-  /** Wajib; nomor untuk login OTP. Jika sudah terdaftar, akun itu ditambahkan ke klub. */
-  phone: string;
+  /** Nomor HP dan/atau email (minimal salah satu). Akun yang sudah terdaftar ditautkan ke klub. */
+  phone?: string | null;
   name?: string | null;
   email?: string | null;
   note?: string | null;
@@ -410,7 +417,7 @@ export interface CreateClubPlayerResponse {
 
 export interface UpdateClubPlayerInput {
   name?: string | null;
-  phone?: string;
+  phone?: string | null;
   email?: string | null;
   note?: string | null;
   isBlocked?: boolean;

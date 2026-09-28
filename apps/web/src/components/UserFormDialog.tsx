@@ -58,8 +58,8 @@ export function UserFormDialog({
       if (username.trim() && !USERNAME_RE.test(username.trim())) return t('users.errors.usernameInvalid')
       if (role === 'CLUB_ADMIN' && !clubId) return t('users.errors.clubRequired')
       if (passwordRequired && !password) return t('users.errors.passwordRequired')
-    } else if (!phone.trim()) {
-      return t('users.errors.phoneRequired')
+    } else if (!phone.trim() && !email.trim()) {
+      return t('users.errors.contactRequired')
     }
     if (password && password.length < 12) return t('users.errors.passwordShort')
     return null
@@ -186,10 +186,13 @@ export function UserFormDialog({
           </div>
         )}
 
-        <Field
-          label={t('users.phone')}
-          hint={role === 'PLAYER' ? t('users.phoneHintPlayer') : t('users.phoneHintAdmin')}
-        >
+        {role === 'PLAYER' && (
+          <Field label={t('users.email')} hint={t('users.emailHintPlayer')}>
+            <Input type="email" value={email} maxLength={254} onChange={(e) => setEmail(e.target.value)} />
+          </Field>
+        )}
+
+        <Field label={t('users.phone')} hint={t('users.phoneHintAdmin')}>
           <Input
             type="tel"
             inputMode="tel"

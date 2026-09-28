@@ -131,17 +131,25 @@ model ClubMember {
   @@index([userId])
 }
 
+enum OtpChannel {
+  WHATSAPP
+  SMS
+  EMAIL
+}
+
 model OtpCode {
-  id         String    @id @default(cuid())
-  phone      String
+  id         String     @id @default(cuid())
+  // Nomor HP (E.164) untuk WHATSAPP/SMS, atau email (huruf kecil) untuk EMAIL.
+  target     String
+  channel    OtpChannel
   // HMAC kode OTP, kode aslinya tidak disimpan.
   codeHash   String
   expiresAt  DateTime
-  attempts   Int       @default(0)
+  attempts   Int        @default(0)
   consumedAt DateTime?
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime   @default(now())
 
-  @@index([phone, createdAt])
+  @@index([target, createdAt])
 }
 
 model Session {

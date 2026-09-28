@@ -1,10 +1,21 @@
-import { Body, Controller, Get, HttpCode, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  NotFoundException,
+  Patch,
+  Post,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ApiAcceptedResponse,
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiExcludeEndpoint,
   ApiForbiddenResponse,
   ApiOkResponse,
+  ApiServiceUnavailableResponse,
   ApiTags,
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
@@ -19,16 +30,28 @@ import { AdminLoginDto } from './dto/admin-login.dto.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import {
   AuthResponseEntity,
-  OtpRequestedEntity,
+  EmailCodeRequestedEntity,
   UserEntity,
 } from './dto/auth.entities.js';
+import {
+  RequestEmailCodeDto,
+  VerifyEmailCodeDto,
+} from './dto/email-code.dto.js';
 import { RequestOtpDto } from './dto/request-otp.dto.js';
 import { VerifyOtpDto } from './dto/verify-otp.dto.js';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  private readonly phoneOtpEnabled: boolean;
+
+  constructor(
+    private readonly auth: AuthService,
+    config: ConfigService,
+  ) {
+    // Phone OTP (WhatsApp/SMS) stays hidden until a provider is connected.
+    this.phoneOtpEnabled = config.get('PHONE_OTP_ENABLED', 'false') === 'true';
+  }
 
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
@@ -42,13 +65,44 @@ export class AuthController {
     return this.auth.adminLogin(dto.login, dto.password);
   }
 
+  /** Player sign-in (temporary, instead of phone OTP): a 6-digit code by email. */
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('email/request')
+  @HttpCode(202)
+  @ApiAcceptedResponse({ type: EmailCodeRequestedEntity })
+  @ApiTooManyRequestsResponse({
+    description: 'Kode baru saja dikirim, tunggu 60 detik',
+  })
+  @ApiServiceUnavailableResponse({ description: 'Email gagal dikirim (SMTP)' })
+  requestEmailCode(@Body() dto: RequestEmailCodeDto) {
+    return this.auth.requestEmailCode(dto.email);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('email/verify')
+  @HttpCode(200)
+  @ApiOkResponse({
+    type: AuthResponseEntity,
+    description: 'Login pertama membuat akun pemain',
+  })
+  @ApiUnauthorizedResponse({
+    description:
+      'Kode salah, kedaluwarsa, terlalu banyak percobaan, atau email milik admin',
+  })
+  verifyEmailCode(@Body() dto: VerifyEmailCodeDto) {
+    return this.auth.verifyEmailCode(dto.email, dto.code);
+  }
+
+  // Phone OTP: hidden from Swagger and disabled until SMS/WhatsApp is connected.
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('otp/request')
   @HttpCode(202)
-  @ApiAcceptedResponse({ type: OtpRequestedEntity })
-  @ApiTooManyRequestsResponse({ description: 'OTP baru saja dikirim' })
+  @ApiExcludeEndpoint()
   requestOtp(@Body() dto: RequestOtpDto) {
+    this.assertPhoneOtp();
     return this.auth.requestOtp(dto.phone);
   }
 
@@ -56,12 +110,15 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('otp/verify')
   @HttpCode(200)
-  @ApiOkResponse({ type: AuthResponseEntity })
-  @ApiUnauthorizedResponse({
-    description: 'Kode salah, kedaluwarsa, atau terlalu banyak percobaan',
-  })
+  @ApiExcludeEndpoint()
   verifyOtp(@Body() dto: VerifyOtpDto) {
+    this.assertPhoneOtp();
     return this.auth.verifyOtp(dto.phone, dto.code);
+  }
+
+  private assertPhoneOtp() {
+    if (!this.phoneOtpEnabled)
+      throw new NotFoundException('Phone OTP sign-in is not available yet');
   }
 
   @Patch('password')
@@ -73,7 +130,8 @@ export class AuthController {
     description: 'Token baru; token lama tidak berlaku lagi',
   })
   @ApiBadRequestResponse({
-    description: 'Password lama salah, atau password baru tidak valid / sama dengan yang lama',
+    description:
+      'Password lama salah, atau password baru tidak valid / sama dengan yang lama',
   })
   @ApiForbiddenResponse({ description: 'Bukan admin' })
   changePassword(
