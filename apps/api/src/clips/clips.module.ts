@@ -1,6 +1,7 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { RealtimeModule } from '../realtime/realtime.module.js';
+import { ClipLibraryService } from './clip-library.service.js';
 import { ClipStorage } from './clip-storage.service.js';
 import { CLIPS_QUEUE } from './clips.constants.js';
 import { ClipsController } from './clips.controller.js';
@@ -10,7 +11,7 @@ import { ClipsService } from './clips.service.js';
 @Module({
   imports: [BullModule.registerQueue({ name: CLIPS_QUEUE }), RealtimeModule],
   controllers: [ClipsController],
-  providers: [ClipsService, ClipStorage, ClipsProcessor],
+  providers: [ClipsService, ClipStorage, ClipsProcessor, ClipLibraryService],
   exports: [ClipsService],
 })
 export class ClipsModule {}

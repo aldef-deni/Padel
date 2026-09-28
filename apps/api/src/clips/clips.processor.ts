@@ -60,8 +60,12 @@ export class ClipsProcessor extends WorkerHost {
       throw new Error(message);
     }
 
-    const url = await this.storage.save(clip.id, res.body);
-    await this.clips.setStatus(clip.id, ClipStatus.READY, { url, error: null });
+    const { url, sizeBytes } = await this.storage.save(clip.id, res.body);
+    await this.clips.setStatus(clip.id, ClipStatus.READY, {
+      url,
+      sizeBytes,
+      error: null,
+    });
     this.logger.log(
       `Clip ${clip.id} ready (${clip.camera.streamPath}, ${clip.durationSec}s)`,
     );

@@ -369,6 +369,101 @@ describe('Sessions & replay (e2e)', () => {
     expect(failed.error).toMatch(/No recording for this time range/);
   }, 30_000);
 
+  it('replay library: sizes, stats, filters, club scope, delete; recording status', async () => {
+    const lib = await request(server())
+      .get(`/api/clips?clubId=${clubId}`)
+      .set(auth(adminToken))
+      .expect(200);
+    expect(lib.body.stats).toMatchObject({
+      total: 2,
+      ready: 1,
+      failed: 1,
+      inProgress: 0,
+      today: 2,
+    });
+    const ready = lib.body.items.find((c: Clip) => c.status === 'READY');
+    expect(ready).toMatchObject({
+      court: { id: courtId, name: 'Lapangan Replay' },
+      camera: { name: 'Cam' },
+      requestedBy: { id: expect.any(String) },
+      session: { id: expect.any(String) },
+    });
+    expect(ready.sizeBytes).toBeGreaterThan(10_000);
+    expect(lib.body.stats.storageBytes).toBe(ready.sizeBytes);
+    expect(ready.downloadUrl).toMatch(/^\/api\/clips\/.+\/file\?/);
+
+    const list = async (query: string, token = adminToken) =>
+      (
+        await request(server())
+          .get(`/api/clips?clubId=${clubId}&${query}`)
+          .set(auth(token))
+          .expect(200)
+      ).body;
+    expect((await list('status=FAILED')).items.map((c: Clip) => c.status)).toEqual(['FAILED']);
+    expect((await list(`courtId=${offlineCourtId}`)).total).toBe(1);
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+    const tomorrow = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(
+      new Date(Date.now() + 86_400_000),
+    );
+    expect((await list(`from=${today}&to=${today}`)).total).toBe(2);
+    expect((await list(`from=${tomorrow}`)).total).toBe(0);
+    await request(server())
+      .get('/api/clips?from=kemarin')
+      .set(auth(adminToken))
+      .expect(400);
+
+    // Other club's admin: scoped to their own club; players have no access.
+    await request(server())
+      .get(`/api/clips?clubId=${clubId}`)
+      .set(auth(otherAdminToken))
+      .expect(403);
+    const own = await request(server())
+      .get('/api/clips')
+      .set(auth(otherAdminToken))
+      .expect(200);
+    expect(own.body.total).toBe(0);
+    await request(server()).get('/api/clips').set(auth(playerToken)).expect(403);
+
+    // Recording status comes from MediaMTX segments.
+    const status = await request(server())
+      .get(`/api/cameras/status?clubId=${clubId}`)
+      .set(auth(adminToken))
+      .expect(200);
+    expect(status.body.recordRetentionHours).toBe(2);
+    const byPath = new Map(
+      status.body.cameras.map((c: { streamPath: string }) => [c.streamPath, c]),
+    );
+    expect(byPath.get(streamPath)).toMatchObject({
+      recording: { active: true, availableFrom: expect.any(String) },
+    });
+    expect(
+      (byPath.get(streamPath) as { recording: { segments: number } }).recording.segments,
+    ).toBeGreaterThan(0);
+    expect(byPath.get(offlinePath)).toMatchObject({
+      recording: { active: false, availableFrom: null, segments: 0 },
+    });
+
+    // Delete: removes the row and the file.
+    await request(server())
+      .delete(`/api/clips/${ready.id}`)
+      .set(auth(otherAdminToken))
+      .expect(403);
+    await request(server())
+      .delete(`/api/clips/${ready.id}`)
+      .set(auth(adminToken))
+      .expect(204);
+    expect(await app.get(ClipStorage).size(ready.id)).toBeNull();
+    expect((await list('')).stats).toMatchObject({ total: 1, storageBytes: 0 });
+    await request(server())
+      .delete(`/api/clips/${ready.id}`)
+      .set(auth(adminToken))
+      .expect(404);
+
+    // Not a demo instance: no demo account advertised.
+    const config = await request(server()).get('/api/public/config').expect(200);
+    expect(config.body).toEqual({ demo: null });
+  });
+
   it('TV link: rotate invalidates the old key; other clubs cannot read it', async () => {
     await request(server())
       .get(`/api/clubs/${clubId}/tv-link`)

@@ -1,0 +1,18 @@
+[Unit]
+Description=Padel Replay demo camera %i (synthetic stream to MediaMTX court-demo-%i)
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=aldeftech
+Group=aldeftech
+# CAMERA_USER / CAMERA_PASS (same credentials as real cameras).
+EnvironmentFile=/opt/padel/infra/.env
+ExecStart=/opt/padel/infra/demo/demo-camera.sh %i
+Restart=always
+RestartSec=5
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

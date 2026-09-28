@@ -5,8 +5,9 @@ Satu VM: nginx (TLS Let's Encrypt) di depan web statis, API NestJS (systemd) dan
 | Komponen | Lokasi di server | Salinan di repo |
 |---|---|---|
 | nginx site | `/etc/nginx/sites-available/padel` (symlink di `sites-enabled`) | `nginx-padel.conf` |
+| nginx site demo | `/etc/nginx/sites-available/padel-demo` | `nginx-padel-demo.conf` |
 | Service API | `/etc/systemd/system/padel-api.service` | `padel-api.service` |
-| Sertifikat | `/etc/letsencrypt/live/padel.aldeftech.com/` | – |
+| Sertifikat | `/etc/letsencrypt/live/padel.aldeftech.com/`, `.../demo.padel.aldeftech.com/` | – |
 | Hook perpanjangan | `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh` (reload nginx) | – |
 | Web statis | `/opt/padel/apps/web/dist` (hasil build) | – |
 
@@ -21,9 +22,13 @@ Media WebRTC (UDP 8189), RTMP 1935 dan SRT 8890 tetap langsung ke IP server.
 cd /opt/padel && git pull
 pnpm install
 pnpm --filter @padel/api exec prisma migrate deploy
-pnpm --filter @padel/api build && sudo systemctl restart padel-api
-pnpm --filter @padel/web build          # langsung dipakai nginx, tanpa restart
+# database demo juga (URL dari apps/api/.env.demo)
+(cd apps/api && DATABASE_URL=$(grep ^DATABASE_URL= .env.demo | cut -d= -f2-) pnpm exec prisma migrate deploy)
+pnpm --filter @padel/api build && sudo systemctl restart padel-api padel-api-demo
+pnpm --filter @padel/web build          # langsung dipakai nginx (produksi & demo), tanpa restart
 ```
+
+Instance demo (demo.padel.aldeftech.com, reset harian): lihat `infra/demo/README.md`.
 
 Log API: `journalctl -u padel-api -f`. Status: `systemctl status padel-api nginx`.
 

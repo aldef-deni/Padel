@@ -25,11 +25,11 @@ export class ClipStorage implements OnModuleInit {
     return join(this.dir, `${clipId}.mp4`);
   }
 
-  /** Streams the body to disk; the file only appears once fully written. Returns its URL. */
+  /** Streams the body to disk; the file only appears once fully written. Returns its URL and size. */
   async save(
     clipId: string,
     body: ReadableStream<Uint8Array>,
-  ): Promise<string> {
+  ): Promise<{ url: string; sizeBytes: number }> {
     const final = this.filePath(clipId);
     const partial = `${final}.part`;
     try {
@@ -38,14 +38,22 @@ export class ClipStorage implements OnModuleInit {
         Readable.fromWeb(body as unknown as NodeReadableStream),
         createWriteStream(partial),
       );
-      if ((await stat(partial)).size === 0)
-        throw new Error('Playback server returned an empty clip');
+      const { size } = await stat(partial);
+      if (size === 0) throw new Error('Playback server returned an empty clip');
       await rename(partial, final);
+      return { url: pathToFileURL(final).href, sizeBytes: size };
     } catch (err) {
       await rm(partial, { force: true });
       throw err;
     }
-    return pathToFileURL(final).href;
+  }
+
+  /** Size of a stored clip in bytes, or null when the file is missing. */
+  async size(clipId: string): Promise<number | null> {
+    return stat(this.filePath(clipId)).then(
+      (s) => s.size,
+      () => null,
+    );
   }
 
   async remove(clipId: string) {

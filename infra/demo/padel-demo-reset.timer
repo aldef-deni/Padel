@@ -1,0 +1,10 @@
+[Unit]
+Description=Reset Padel Replay demo data every day at 00:00 WIB
+
+[Timer]
+# 17:00 UTC = 00:00 WIB (Asia/Jakarta). Keep in sync with DEMO_RESET_HOUR_UTC in apps/api/.env.demo.
+OnCalendar=*-*-* 17:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

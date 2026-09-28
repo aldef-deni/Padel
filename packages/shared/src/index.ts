@@ -151,11 +151,24 @@ export interface CameraStatus {
   video: { codec: string; width: number | null; height: number | null } | null;
   bytesReceived: number;
   readers: number;
+  /** Rekaman berjalan di MediaMTX (buffer untuk replay). */
+  recording: CameraRecording;
+}
+
+export interface CameraRecording {
+  /** true jika kamera online sehingga rekaman sedang ditulis. */
+  active: boolean;
+  /** Awal rekaman tertua yang masih tersimpan (replay bisa diambil sejak waktu ini). */
+  availableFrom: IsoDateString | null;
+  /** Jumlah segmen rekaman di disk. */
+  segments: number;
 }
 
 export interface CameraStatusResponse {
   /** false jika API MediaMTX tidak bisa dihubungi; semua kamera dianggap offline. */
   mediaServerReachable: boolean;
+  /** Rekaman lebih tua dari ini dihapus otomatis oleh MediaMTX. */
+  recordRetentionHours: number;
   cameras: CameraStatus[];
 }
 
@@ -219,8 +232,59 @@ export interface Clip {
   error: string | null;
   /** URL video bertanda tangan (sementara), hanya jika status READY. */
   downloadUrl: string | null;
+  /** Ukuran file tersimpan (byte), jika READY. */
+  sizeBytes: number | null;
   createdAt: IsoDateString;
   updatedAt: IsoDateString;
+}
+
+/** Klip di pustaka replay admin (semua sesi klub). */
+export interface ClipLibraryItem extends Clip {
+  court: { id: string; name: string };
+  camera: { id: string; name: string };
+  requestedBy: { id: string; name: string | null; avatarUrl: string | null };
+  session: { id: string; startedAt: IsoDateString; endedAt: IsoDateString | null };
+}
+
+export interface ClipLibraryQuery {
+  clubId?: string;
+  courtId?: string;
+  status?: ClipStatus;
+  /** Tanggal lokal klub, YYYY-MM-DD (inklusif). */
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ClipLibraryStats {
+  total: number;
+  ready: number;
+  failed: number;
+  inProgress: number;
+  today: number;
+  /** Total ukuran file klip tersimpan (byte). */
+  storageBytes: number;
+}
+
+export interface ClipLibraryResponse {
+  items: ClipLibraryItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  stats: ClipLibraryStats;
+}
+
+// ---- Konfigurasi publik aplikasi ----
+
+export interface AppConfig {
+  /** Terisi hanya di instance demo (demo.padel.aldeftech.com). */
+  demo: {
+    username: string;
+    password: string;
+    /** Reset data berikutnya. */
+    resetAt: IsoDateString;
+  } | null;
 }
 
 // ---- Socket.IO (path /socket.io) ----

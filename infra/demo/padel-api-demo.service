@@ -1,0 +1,22 @@
+[Unit]
+Description=Padel Replay API - demo instance (demo.padel.aldeftech.com)
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+User=aldeftech
+Group=aldeftech
+WorkingDirectory=/opt/padel/apps/api
+# Same build as padel-api, own settings: database padel_demo, port 3001, demo data dirs.
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3001
+Environment=ENV_FILE=.env.demo
+ExecStart=/usr/bin/node --enable-source-maps dist/main.js
+Restart=always
+RestartSec=3
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

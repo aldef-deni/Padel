@@ -17,6 +17,8 @@ export class ClipEntity implements Clip {
     description: 'URL video bertanda tangan (berlaku 1 jam), hanya jika READY',
   })
   downloadUrl: string | null;
+  @ApiProperty({ type: Number, nullable: true, description: 'Ukuran file (byte)' })
+  sizeBytes: number | null;
   @ApiProperty() createdAt: string;
   @ApiProperty() updatedAt: string;
 }

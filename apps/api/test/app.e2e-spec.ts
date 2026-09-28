@@ -449,6 +449,7 @@ describe('API (e2e)', () => {
         .set(auth(superToken))
         .expect(200);
       expect(res.body.mediaServerReachable).toBe(true);
+      expect(res.body.recordRetentionHours).toBe(2);
       expect(res.body.cameras).toEqual([
         {
           cameraId: camera.id,
@@ -459,6 +460,7 @@ describe('API (e2e)', () => {
           video: null,
           bytesReceived: 0,
           readers: 0,
+          recording: { active: false, availableFrom: null, segments: 0 },
         },
       ]);
 

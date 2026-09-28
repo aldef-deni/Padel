@@ -12,6 +12,7 @@ import {
   type LogoType,
 } from '../clubs/logo-storage.service.js';
 import { Role, type Prisma } from '../generated/prisma/client.js';
+import { DemoService } from '../demo/demo.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AvatarStorage } from './avatar-storage.service.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
@@ -21,10 +22,14 @@ export class ProfileService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly avatars: AvatarStorage,
+    private readonly demo: DemoService,
   ) {}
 
   async update(userId: string, dto: UpdateProfileDto): Promise<UserEntity> {
     const user = await this.find(userId);
+    // Username/email are the demo account's login: keep them stable for every visitor.
+    if (dto.username !== undefined || dto.email !== undefined)
+      await this.demo.assertNotDemoAccount(userId);
     const data: Prisma.UserUpdateInput = {};
     const clean = (v: string | null | undefined) => v?.trim() || null;
 

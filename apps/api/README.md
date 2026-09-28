@@ -39,7 +39,9 @@ pnpm start:dev
 | Layar TV | lihat di bawah | |
 | Court | `/api/courts?clubId=`, `/api/courts/:id` | `name` unik per klub |
 | Camera | `/api/cameras?courtId=&clubId=`, `/api/cameras/:id` | `streamPath` unik, pola `court-<id>` |
-| Status kamera | `GET /api/cameras/status?clubId=` | online/offline dari API MediaMTX |
+| Status kamera | `GET /api/cameras/status?clubId=` | online/offline dari API MediaMTX + status perekaman per kamera (`recording.active`, `availableFrom` = replay tersedia sejak, jumlah segmen) dan `recordRetentionHours` |
+| Pustaka replay | lihat Sesi & replay | |
+| Konfigurasi publik | `GET /api/public/config` | `{ demo: null }`, atau di instance demo `{ demo: { username, password, resetAt } }` |
 | Sesi & replay | lihat di bawah | |
 | Turnamen | lihat di bawah | |
 
@@ -164,6 +166,22 @@ Status: `DRAFT` → `REGISTRATION` → `ONGOING` (setelah undian) → `COMPLETED
 Validasi skor: set biasa sampai `gamesPerSet` (mis. 6-4, 7-5, 7-6), set penentu sebagai super tie-break sampai 10
 selisih 2 jika aktif. Klasemen: poin (1 per menang), selisih set, selisih game, head-to-head, game menang, seed.
 Logika murni ada di `src/tournaments/engine.ts` (unit test `engine.spec.ts`).
+
+## Pustaka replay (admin)
+
+| Endpoint | Keterangan |
+|---|---|
+| `GET /api/clips?clubId=&courtId=&status=&from=&to=&page=&pageSize=` | Semua klip klub lintas sesi (lapangan, kamera, peminta, sesi, `sizeBytes`, `downloadUrl`) + `stats`: total, siap, gagal, sedang diproses, hari ini, total ukuran penyimpanan. `from`/`to` = tanggal lokal klub (YYYY-MM-DD). CLUB_ADMIN otomatis dibatasi ke klubnya |
+| `DELETE /api/clips/:id` | Hapus klip beserta file-nya (204) |
+
+Ukuran file dicatat saat klip selesai diambil; klip lama tanpa ukuran diisi dari disk saat pertama tampil.
+
+## Instance demo
+
+`DEMO_MODE=true` (hanya di `apps/api/.env.demo`): akun `demo` tidak bisa diubah/dihapus lewat
+`/api/users`, tidak bisa ganti password, dan username/email profilnya terkunci (403), agar semua
+pengunjung tetap bisa login. `ENV_FILE` memilih file env (default `.env`). Data demo dibuat ulang
+oleh `ENV_FILE=.env.demo pnpm demo:reset` (lihat infra/demo/README.md).
 
 ## Sesi & replay
 

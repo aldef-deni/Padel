@@ -17,10 +17,15 @@ import { PlayersModule } from './players/players.module.js';
 import { ProfileModule } from './profile/profile.module.js';
 import { MailModule } from './mail/mail.module.js';
 import { TournamentsModule } from './tournaments/tournaments.module.js';
+import { DemoModule } from './demo/demo.module.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    // ENV_FILE lets a second instance (demo) run from the same directory with its own settings.
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: process.env.ENV_FILE ?? '.env',
+    }),
     // Default limit per IP; auth routes set stricter limits with @Throttle().
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     BullModule.forRootAsync({
@@ -43,6 +48,7 @@ import { TournamentsModule } from './tournaments/tournaments.module.js';
     PlayersModule,
     ProfileModule,
     TournamentsModule,
+    DemoModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: HttpThrottlerGuard }],

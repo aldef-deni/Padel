@@ -9,6 +9,7 @@ import { hashPassword } from '../auth/password.js';
 import { normalizePhone } from '../auth/phone.js';
 import { Prisma, Role } from '../generated/prisma/client.js';
 import { userAvatarUrl } from '../common/avatar-url.js';
+import { DemoService } from '../demo/demo.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AvatarStorage } from '../profile/avatar-storage.service.js';
 import {
@@ -40,6 +41,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly avatars: AvatarStorage,
+    private readonly demo: DemoService,
   ) {}
 
   async list(query: ListUsersQuery): Promise<UserListResponseEntity> {
@@ -131,6 +133,7 @@ export class UsersService {
     dto: UpdateUserDto,
   ): Promise<ManagedUserEntity> {
     const existing = await this.findRow(id);
+    await this.demo.assertNotDemoAccount(id);
     const shape = normalize(existing, dto);
     await this.validateShape(shape);
 
@@ -183,6 +186,7 @@ export class UsersService {
 
   async remove(actor: AuthUser, id: string) {
     const user = await this.findRow(id);
+    await this.demo.assertNotDemoAccount(id);
     if (actor.id === id)
       throw new BadRequestException('You cannot delete your own account');
     if (user.role === Role.SUPER_ADMIN && user.isActive)

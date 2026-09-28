@@ -196,6 +196,8 @@ model Clip {
   durationSec   Int
   status        ClipStatus @default(PENDING)
   url           String?
+  // Ukuran file klip tersimpan (byte), diisi saat READY.
+  sizeBytes     Int?
   error         String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
@@ -206,6 +208,7 @@ model Clip {
 
   @@index([sessionId])
   @@index([status])
+  @@index([createdAt])
 }
 
 // ---- Turnamen ----

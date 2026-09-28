@@ -21,10 +21,11 @@ Login dengan akun admin (SUPER_ADMIN atau CLUB_ADMIN). Akun pemain ditolak.
 | `/login` | Login admin (email + password) |
 | `/` | Dashboard: jumlah lapangan, kamera online, kartu per lapangan dengan status kamera (refresh 5 detik) |
 | `/courts` | Tambah, ubah nama, hapus lapangan |
-| `/cameras` | Tambah, ubah, aktif/nonaktifkan, hapus kamera + status live |
+| `/cameras` | Tambah, ubah, aktif/nonaktifkan, hapus kamera + status live & perekaman (replay tersedia sejak) |
 | `/courts/:id` | Live stream tiap kamera + URL publish kamera |
 | `/tv-setup` | Layar TV: unggah logo klub, buat/ganti link TV |
 | `/tv/:clubId?key=` | **Kiosk TV** (tanpa login): layar idle dengan logo & jam; klip READY diputar otomatis layar penuh (antrean), chip "menyiapkan replay", kembali ke idle setelah selesai |
+| `/replays` | Pustaka replay: statistik (total, hari ini, penyimpanan, gagal), filter lapangan/status/tanggal, putar, unduh, hapus klip |
 | `/tournaments` | Turnamen: daftar per status + pencarian, buat turnamen (format, jadwal, biaya, aturan skor) |
 | `/tournaments/:id` | Kelola turnamen: ringkasan & langkah berikutnya, tim, undian, jadwal & input skor, klasemen, bagan |
 | `/t/:slug` | **Halaman publik turnamen** (tanpa login): bagan, klasemen, jadwal, tim; refresh otomatis 30 detik |
@@ -68,3 +69,9 @@ Buka link dari menu **Layar TV** di browser TV, idealnya mode kiosk, mis.
 Video diputar tanpa suara (syarat autoplay browser). Halaman meminta Wake Lock agar layar tidak tidur
 (hanya di konteks aman: https atau localhost). Jika admin membuat link baru, TV lama langsung
 menampilkan "link tidak valid".
+
+## Instance demo
+
+Di demo.padel.aldeftech.com, `GET /api/public/config` mengembalikan akun demo: halaman login
+menampilkan kotak "Coba akun demo" (isi otomatis) dan layout menampilkan banner hitung mundur
+reset harian. Build web sama dengan produksi.

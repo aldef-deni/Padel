@@ -1,4 +1,4 @@
-import { ArrowRight, Eye, EyeOff, Loader2, Lock, Radio, RotateCcw, Tv, User } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, FlaskConical, Loader2, Lock, Radio, RotateCcw, Tv, User } from 'lucide-react'
 import { useState, type ComponentType, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useLocation, useNavigate } from 'react-router'
@@ -9,12 +9,14 @@ import { loginHeroImage } from '../lib/brand-assets'
 import { ApiRequestError } from '../lib/api'
 import { useAuth } from '../lib/auth-context'
 import { errorMessage } from '../lib/errors'
+import { useAppConfig } from '../lib/queries'
 
 export function LoginPage() {
   const { t } = useTranslation()
   const { user, login: signIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const demo = useAppConfig().data?.demo
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -59,6 +61,27 @@ export function LoginPage() {
             </div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{t('login.title')}</h1>
             <p className="mt-2 text-sm leading-relaxed text-slate-500">{t('login.subtitle')}</p>
+
+            {demo && (
+              <div className="mt-6 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <FlaskConical className="h-5 w-5 shrink-0 text-amber-600" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-amber-900">{t('demo.loginTitle')}</p>
+                  <p className="text-xs text-amber-800">{t('demo.loginHint', { username: demo.username, password: demo.password })}</p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setLogin(demo.username)
+                    setPassword(demo.password)
+                  }}
+                >
+                  {t('demo.fill')}
+                </Button>
+              </div>
+            )}
 
             <form onSubmit={onSubmit} className="mt-8 space-y-5">
               <Field label={t('login.identifier')}>

@@ -1,0 +1,11 @@
+[Unit]
+Description=Padel Replay demo: reset data to the initial demo set
+After=padel-api-demo.service
+
+[Service]
+Type=oneshot
+User=aldeftech
+Group=aldeftech
+WorkingDirectory=/opt/padel/apps/api
+Environment=ENV_FILE=.env.demo
+ExecStart=/usr/bin/env pnpm demo:reset

@@ -15,6 +15,7 @@ import { ProfilePage } from './pages/ProfilePage'
 import { ClubsPage } from './pages/ClubsPage'
 import { ClubDetailPage } from './pages/ClubDetailPage'
 import { RequireSuperAdmin } from './components/RequireSuperAdmin'
+import { ReplaysPage } from './pages/ReplaysPage'
 import { TournamentsPage } from './pages/TournamentsPage'
 import { TournamentDetailPage } from './pages/TournamentDetailPage'
 import { PublicTournamentPage } from './pages/PublicTournamentPage'
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
           { path: 'courts/:courtId/session', element: <SessionPage /> },
           { path: 'cameras', element: <CamerasPage /> },
           { path: 'players', element: <PlayersPage /> },
+          { path: 'replays', element: <ReplaysPage /> },
           { path: 'tournaments', element: <TournamentsPage /> },
           { path: 'tournaments/:id', element: <TournamentDetailPage /> },
           { path: 'profile', element: <ProfilePage /> },

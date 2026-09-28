@@ -18,6 +18,12 @@ interface MediamtxPath {
   bytesReceived?: number;
 }
 
+export interface RecordingState {
+  /** Start of the oldest segment still on disk. */
+  availableFrom: string | null;
+  segments: number;
+}
+
 export interface PathState {
   online: boolean;
   onlineSince: string | null;
@@ -61,6 +67,37 @@ export class MediamtxService {
       return new Map(body.items.map((p) => [p.name, toPathState(p)]));
     } catch (err) {
       this.logger.warn(`MediaMTX API unreachable: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  /** Recorded segments per path (GET /v3/recordings/list), or null when unreachable. */
+  async getRecordings(): Promise<Map<string, RecordingState> | null> {
+    try {
+      const res = await fetch(
+        `${this.apiUrl}/v3/recordings/list?itemsPerPage=1000`,
+        { signal: AbortSignal.timeout(2000) },
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = (await res.json()) as {
+        items: { name: string; segments: { start: string }[] }[];
+      };
+      return new Map(
+        body.items.map((r) => [
+          r.name,
+          {
+            availableFrom:
+              r.segments
+                .map((seg) => seg.start)
+                .sort((a, b) => a.localeCompare(b))[0] ?? null,
+            segments: r.segments.length,
+          },
+        ]),
+      );
+    } catch (err) {
+      this.logger.warn(
+        `MediaMTX recordings unreachable: ${(err as Error).message}`,
+      );
       return null;
     }
   }

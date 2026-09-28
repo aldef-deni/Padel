@@ -26,6 +26,9 @@ import type {
   RequestReplayInput,
   Session,
   SessionQr,
+  AppConfig,
+  ClipLibraryQuery,
+  ClipLibraryResponse,
   CreateTournamentInput,
   TournamentDetail,
   TournamentListQuery,
@@ -465,5 +468,36 @@ export function useTournamentAction<V>(
       if (t) queryClient.setQueryData(['tournament', id], t)
       void queryClient.invalidateQueries({ queryKey: ['tournaments'] })
     },
+  })
+}
+
+// ---- Konfigurasi aplikasi & pustaka replay ----
+
+/** Public app settings (demo banner / login hint). Rarely changes. */
+export function useAppConfig() {
+  return useQuery({
+    queryKey: ['app-config'],
+    queryFn: () => api<AppConfig>('/public/config'),
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useClipLibrary(query: ClipLibraryQuery) {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) if (value !== undefined && value !== '') params.set(key, String(value))
+  return useQuery({
+    queryKey: ['clip-library', query],
+    queryFn: () => api<ClipLibraryResponse>(`/clips?${params}`),
+    placeholderData: keepPreviousData,
+    // Keep PENDING/PROCESSING clips and "today" fresh.
+    refetchInterval: 15_000,
+  })
+}
+
+export function useDeleteClip() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api<void>(`/clips/${id}`, { method: 'DELETE' }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['clip-library'] }),
   })
 }

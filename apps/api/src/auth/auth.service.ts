@@ -18,6 +18,7 @@ import { OtpChannel, Role, type User } from '../generated/prisma/client.js';
 import { MAILER, type Mailer } from '../mail/mailer.js';
 import { loginCodeEmail } from '../mail/templates.js';
 import { userAvatarUrl } from '../common/avatar-url.js';
+import { DemoService } from '../demo/demo.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { JwtPayload } from './auth-user.js';
 import { ADMIN_ROLES } from './decorators/roles.decorator.js';
@@ -50,6 +51,7 @@ export class AuthService implements OnModuleInit {
     config: ConfigService,
     @Inject(OTP_SENDER) private readonly otpSender: OtpSender,
     @Inject(MAILER) private readonly mailer: Mailer,
+    private readonly demo: DemoService,
   ) {
     this.otpSecret = config.getOrThrow<string>('JWT_SECRET');
   }
@@ -230,6 +232,7 @@ export class AuthService implements OnModuleInit {
     currentPassword: string,
     newPassword: string,
   ): Promise<AuthResponseEntity> {
+    await this.demo.assertNotDemoAccount(userId);
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (
       !user?.passwordHash ||

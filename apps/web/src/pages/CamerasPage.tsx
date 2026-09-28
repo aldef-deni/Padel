@@ -46,6 +46,17 @@ export function CamerasPage() {
           {cameras.data.length === 0 ? (
             <EmptyState>{t('cameras.empty')}</EmptyState>
           ) : (
+            <>
+            {status.data && (
+              <p className="mb-3 flex items-start gap-2 text-sm text-slate-500">
+                <span className="mt-1.5 h-2 w-2 shrink-0 animate-pulse rounded-full bg-red-500" />
+                {t('cameras.recordingSummary', {
+                  active: status.data.cameras.filter((c) => c.recording.active).length,
+                  total: status.data.cameras.length,
+                  hours: status.data.recordRetentionHours,
+                })}
+              </p>
+            )}
             <Card className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -72,6 +83,7 @@ export function CamerasPage() {
                 </tbody>
               </table>
             </Card>
+            </>
           )}
         </>
       )}
@@ -230,6 +242,7 @@ function CameraRow({
           <div className="flex flex-col items-start gap-1">
             <StatusBadge state={cameraState(isActive, status, reachable)} />
             {label && <span className="text-xs text-slate-500">{label}</span>}
+            {status && <RecordingLine recording={status.recording} />}
           </div>
         </td>
         <td className="px-4 py-3">
@@ -281,5 +294,20 @@ function CameraRow({
         </tr>
       )}
     </>
+  )
+}
+
+/** "● Merekam · replay tersedia sejak 14:05" under the camera status. */
+function RecordingLine({ recording }: { recording: CameraStatus['recording'] }) {
+  const { t, i18n } = useTranslation()
+  const since = recording.availableFrom
+    ? new Date(recording.availableFrom).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })
+    : null
+  return (
+    <span className={`flex items-center gap-1.5 text-xs ${recording.active ? 'text-red-600' : 'text-slate-400'}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${recording.active ? 'animate-pulse bg-red-500' : 'bg-slate-300'}`} />
+      {recording.active ? t('cameras.recording') : t('cameras.notRecording')}
+      {since && <span className="text-slate-500">· {t('cameras.recordedSince', { time: since })}</span>}
+    </span>
   )
 }

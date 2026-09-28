@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   assertClubAccess,
   clubScope,
@@ -13,10 +14,18 @@ import { UpdateCameraDto } from './dto/update-camera.dto.js';
 
 @Injectable()
 export class CamerasService {
+  /** Matches recordDeleteAfter in infra/mediamtx/mediamtx.yml. */
+  private readonly recordRetentionHours: number;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mediamtx: MediamtxService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.recordRetentionHours = Number(
+      config.get('MEDIAMTX_RECORD_RETENTION_HOURS', 2),
+    );
+  }
 
   async create(user: AuthUser, dto: CreateCameraDto) {
     await this.assertCourtAccess(user, dto.courtId);
@@ -38,14 +47,17 @@ export class CamerasService {
     user: AuthUser,
     query: ListCamerasQuery,
   ): Promise<CameraStatusResponseEntity> {
-    const [cameras, paths] = await Promise.all([
+    const [cameras, paths, recordings] = await Promise.all([
       this.findAll(user, query),
       this.mediamtx.getPaths(),
+      this.mediamtx.getRecordings(),
     ]);
     return {
       mediaServerReachable: paths !== null,
+      recordRetentionHours: this.recordRetentionHours,
       cameras: cameras.map((camera) => {
         const path = paths?.get(camera.streamPath);
+        const recorded = recordings?.get(camera.streamPath);
         return {
           cameraId: camera.id,
           streamPath: camera.streamPath,
@@ -55,6 +67,11 @@ export class CamerasService {
           video: path?.video ?? null,
           bytesReceived: path?.bytesReceived ?? 0,
           readers: path?.readers ?? 0,
+          recording: {
+            active: path?.online ?? false,
+            availableFrom: recorded?.availableFrom ?? null,
+            segments: recorded?.segments ?? 0,
+          },
         };
       }),
     };

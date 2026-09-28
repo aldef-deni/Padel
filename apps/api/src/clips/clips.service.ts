@@ -137,6 +137,7 @@ export class ClipsService {
       error: clip.error,
       downloadUrl:
         clip.status === ClipStatus.READY ? this.signedUrl(clip.id) : null,
+      sizeBytes: clip.sizeBytes,
       createdAt: clip.createdAt.toISOString(),
       updatedAt: clip.updatedAt.toISOString(),
     };

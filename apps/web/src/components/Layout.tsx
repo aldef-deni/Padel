@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Film,
   RectangleHorizontal,
   Trophy,
   Tv,
@@ -20,6 +21,7 @@ import { LANGUAGES, setLanguage } from '../i18n'
 import { useAuth } from '../lib/auth-context'
 import { useActiveClub } from '../lib/club-context'
 import { BrandMark } from './brand'
+import { DemoBanner } from './DemoBanner'
 import { EmptyState, Loading } from './ui'
 import { UserAvatar } from './UserAvatar'
 
@@ -33,6 +35,7 @@ const NAV: {
   { to: '/', key: 'nav.dashboard', icon: LayoutDashboard, end: true },
   { to: '/courts', key: 'nav.courts', icon: RectangleHorizontal },
   { to: '/cameras', key: 'nav.cameras', icon: Camera },
+  { to: '/replays', key: 'nav.replays', icon: Film },
   { to: '/players', key: 'nav.players', icon: UserRound },
   { to: '/tournaments', key: 'nav.tournaments', icon: Trophy },
   { to: '/tv-setup', key: 'nav.tv', icon: Tv },
@@ -89,6 +92,7 @@ export function Layout() {
       )}
 
       <main className="lg:pl-68">
+        <DemoBanner />
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
           {isLoading ? (
             <Loading label={t('common.loading')} />
