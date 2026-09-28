@@ -37,16 +37,19 @@ SUPER_ADMIN (pemilik platform), CLUB_ADMIN (pengelola klub), PLAYER (pemain).
 - Semua commit menggunakan author: aldef-deni <deniafrizal2904@gmail.com>.
 - DILARANG menambahkan "Co-Authored-By", "Generated with Claude Code",
   atau atribusi/kontributor lain dalam pesan commit maupun PR.
-- Jangan push tanpa diminta.
+- Setelah pekerjaan selesai dan terverifikasi (test, typecheck, lint lulus),
+  langsung commit dan push ke origin main tanpa perlu konfirmasi (instruksi pemilik, 2026-09-28).
+  Jangan commit pekerjaan yang belum selesai atau masih gagal test.
+
+## Produksi
+- https://padel.aldeftech.com — nginx + Let's Encrypt, API sebagai service systemd `padel-api`.
+  Detail & cara update: infra/deploy/README.md.
 
 ## Backlog
 - Endpoint kelola user (buat/ubah/nonaktifkan CLUB_ADMIN, reset password).
 - Refresh token (sekarang hanya access token 7 hari).
 - Pembersihan berkala tabel OtpCode (kode kedaluwarsa/terpakai).
-- Set `trust proxy` saat deploy di belakang reverse proxy, agar rate limit memakai IP klien asli.
 - Ganti password akun seed (admin@padel.local, klub@padel.local) sebelum go-live.
-- Reverse proxy produksi (nginx) untuk web + `/api` + `/media/webrtc` + `/media/hls`,
-  meniru proxy di apps/web/vite.config.ts (termasuk rewrite header Location).
 - Klip: pindah penyimpanan ke R2 (ganti ClipStorage), retensi/hapus file lama di /opt/padel/data/clips.
 - Halaman/deep link `APP_PUBLIC_URL/join/<qrToken>` belum ada (untuk aplikasi pemain).
 - Socket.IO Redis adapter jika API dijalankan lebih dari 1 instance.

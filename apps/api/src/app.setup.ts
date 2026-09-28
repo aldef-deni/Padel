@@ -15,6 +15,9 @@ export function configureApp(app: INestApplication) {
   );
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new PrismaExceptionFilter(httpAdapter));
+  // Behind nginx / the Vite proxy on the same host: take the client IP from
+  // X-Forwarded-For (used by the rate limiter) only when the peer is loopback.
+  httpAdapter.getInstance().set('trust proxy', 'loopback');
 
   const config = new DocumentBuilder()
     .setTitle('Padel Replay API')

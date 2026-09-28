@@ -1,0 +1,22 @@
+[Unit]
+Description=Padel Replay API (NestJS)
+# Postgres, Redis & MediaMTX berjalan di Docker (infra/docker-compose.yml, restart unless-stopped).
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+User=aldeftech
+Group=aldeftech
+WorkingDirectory=/opt/padel/apps/api
+# Konfigurasi dibaca dari apps/api/.env oleh @nestjs/config.
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+ExecStart=/usr/bin/node --enable-source-maps dist/main.js
+Restart=always
+RestartSec=3
+# Beri waktu worker BullMQ menyelesaikan job saat stop/restart.
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
