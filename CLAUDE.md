@@ -49,6 +49,8 @@ SUPER_ADMIN (pemilik platform), CLUB_ADMIN (pengelola klub), PLAYER (pemain).
   DB `padel_demo`, service `padel-api-demo` (port 3001, `apps/api/.env.demo`), kamera sintetis,
   reset data harian 00:00 WIB. Setiap deploy API: migrasi & restart juga instance demo.
   Detail: infra/demo/README.md.
+- Nonaktifkan/aktifkan situs: `padel-site off|on prod|demo|all` (halaman pemeliharaan 503 + stop service),
+  `padel-site status`. Detail: infra/deploy/README.md.
 
 ## Backlog
 - Login pemain lewat OTP WhatsApp/SMS (pilihan channel) setelah penyedia dipilih; sementara lewat email.

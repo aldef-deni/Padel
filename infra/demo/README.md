@@ -42,6 +42,7 @@ sudo systemctl start padel-demo-reset        # reset sekarang (±10 detik)
 systemctl list-timers padel-demo-reset.timer  # jadwal reset berikutnya
 journalctl -u padel-api-demo -f               # log API demo (kode email pemain ada di sini)
 systemctl status 'padel-demo-camera@*'        # kamera sintetis
+padel-site off demo / padel-site on demo      # nonaktifkan / aktifkan situs demo
 ```
 
 ## Pasang dari nol

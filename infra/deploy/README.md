@@ -33,6 +33,26 @@ Instance demo (demo.padel.aldeftech.com, reset harian): lihat `infra/demo/README
 
 Log API: `journalctl -u padel-api -f`. Status: `systemctl status padel-api nginx`.
 
+## Menonaktifkan / mengaktifkan situs
+
+Perintah `padel-site` (symlink `/usr/local/bin/padel-site` → `infra/deploy/padel-site.sh`):
+
+```bash
+padel-site status              # status produksi & demo
+padel-site off demo            # demo.padel.aldeftech.com nonaktif
+padel-site off prod            # padel.aldeftech.com nonaktif
+padel-site off all             # keduanya
+padel-site on demo|prod|all    # aktifkan lagi
+```
+
+`off` membuat file penanda `/opt/padel/data/maintenance/<prod|demo>`: nginx langsung menampilkan
+halaman "sedang tidak aktif" (`maintenance.html`, HTTP 503) tanpa reload, lalu service-nya
+dimatikan (`systemctl disable --now`, tetap mati setelah reboot). Produksi: `padel-api`.
+Demo: `padel-api-demo`, kamera demo, dan timer reset. `on` menyalakan service, menunggu API
+sehat, baru membuka situsnya. DNS, sertifikat (perpanjangan tetap jalan), data, dan Docker
+(Postgres, Redis, MediaMTX, dipakai bersama) tidak disentuh. Saat demo diaktifkan lagi, timer
+reset yang terlewat langsung berjalan sehingga data demo kembali segar.
+
 ## Konfigurasi terkait
 
 - `apps/api/.env`: `APP_PUBLIC_URL=https://padel.aldeftech.com` (dipakai di QR sesi & link TV).

@@ -11,6 +11,8 @@ Group=aldeftech
 EnvironmentFile=/opt/padel/infra/.env
 ExecStart=/opt/padel/infra/demo/demo-camera.sh %i
 Restart=always
+# ffmpeg exits 255 when stopped by a signal (padel-site off): not a failure.
+SuccessExitStatus=255
 RestartSec=5
 Nice=10
 
